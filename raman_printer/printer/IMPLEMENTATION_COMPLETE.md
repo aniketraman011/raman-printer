@@ -10,8 +10,8 @@ Your student printing service web application is **100% complete and running**!
 
 ### 1. ✅ Razorpay Integration (LIVE)
 ```
-Key ID: rzp_live_SB2OLoFt68Gc2C
-Secret: 48XkDW65QjD7QkChRX2BY1xO
+Key ID: [Configured in .env.local]
+Secret: [Configured in .env.local]
 Status: CONFIGURED & READY
 ```
 
@@ -139,8 +139,8 @@ npm run dev
 
 ### Razorpay (LIVE MODE)
 ```javascript
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_SB2OLoFt68Gc2C
-RAZORPAY_KEY_SECRET=48XkDW65QjD7QkChRX2BY1xO
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_secret_key
 ```
 ⚠️ **These are LIVE keys - real transactions will occur!**
 

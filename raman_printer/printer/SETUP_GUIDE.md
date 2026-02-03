@@ -3,7 +3,7 @@
 ## ✅ What's Done
 
 ### 1. Razorpay Integration - LIVE MODE ✓
-- **Key ID**: rzp_live_SB2OLoFt68Gc2C
+- **Key ID**: Configured in .env.local
 - **Secret**: Configured in .env.local
 - Payment gateway is ready for production
 
@@ -91,8 +91,8 @@ Your Razorpay is already configured with LIVE keys. To test:
 
 ### Your Live Razorpay Keys
 ```
-Key ID: rzp_live_SB2OLoFt68Gc2C
-Secret: 48XkDW65QjD7QkChRX2BY1xO
+Key ID: [Configured in .env.local]
+Secret: [Configured in .env.local]
 ```
 
 ⚠️ **WARNING**: These are LIVE production keys
@@ -236,8 +236,8 @@ All environment variables in `.env.local`:
 MONGODB_URI=mongodb://localhost:27017/raman-prints
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=raman-prints-secret-key-2026-production
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_SB2OLoFt68Gc2C
-RAZORPAY_KEY_SECRET=48XkDW65QjD7QkChRX2BY1xO
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_secret_key
 ```
 
 ---
