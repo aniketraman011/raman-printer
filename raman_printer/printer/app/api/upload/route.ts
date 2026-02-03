@@ -4,6 +4,11 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 const pdfParse = require('pdf-parse');
 
+// Configure route for large file uploads
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // 60 seconds for file upload
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -35,7 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedFiles = [];
-    const uploadDir = join(process.cwd(), 'public', 'uploads');
+    
+    // Use /tmp directory on Vercel (writable), public/uploads locally
+    const isProduction = process.env.VERCEL === '1';
+    const uploadDir = isProduction 
+      ? '/tmp/uploads' 
+      : join(process.cwd(), 'public', 'uploads');
 
     // Ensure upload directory exists
     if (!existsSync(uploadDir)) {
