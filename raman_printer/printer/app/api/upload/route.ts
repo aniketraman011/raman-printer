@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { put } from '@vercel/blob';
 const pdfParse = require('pdf-parse');
 
 // Configure route for large file uploads
@@ -50,17 +48,6 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedFiles = [];
-    
-    // Use /tmp directory on Vercel (writable), public/uploads locally
-    const isProduction = process.env.VERCEL === '1';
-    const uploadDir = isProduction 
-      ? '/tmp/uploads' 
-      : join(process.cwd(), 'public', 'uploads');
-
-    // Ensure upload directory exists
-    if (!existsSync(uploadDir)) {
-      mkdirSync(uploadDir, { recursive: true });
-    }
 
     for (const file of files) {
       if (!file) continue;
@@ -99,17 +86,21 @@ export async function POST(request: NextRequest) {
       const extension = file.name.split('.').pop();
       const uniqueFilename = `${timestamp}-${randomString}.${extension}`;
 
-      // Convert file to buffer and save
+      // Convert file to buffer
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const filePath = join(uploadDir, uniqueFilename);
 
+      // Upload to Vercel Blob storage
+      let blob;
       try {
-        await writeFile(filePath, buffer);
-      } catch (writeError: any) {
-        console.error('File write error:', writeError);
+        blob = await put(uniqueFilename, buffer, {
+          access: 'public',
+          contentType: file.type,
+        });
+      } catch (uploadError: any) {
+        console.error('Blob upload error:', uploadError);
         return NextResponse.json(
-          { error: `Failed to save file: ${file.name}. ${writeError.message}` },
+          { error: `Failed to upload file: ${file.name}. ${uploadError.message}` },
           { status: 500 }
         );
       }
@@ -128,7 +119,7 @@ export async function POST(request: NextRequest) {
 
       uploadedFiles.push({
         fileName: file.name,
-        fileUrl: `/uploads/${uniqueFilename}`,
+        fileUrl: blob.url, // Use Vercel Blob URL
         fileSize: file.size,
         pageCount, // Will be undefined for non-PDF files or if parsing fails
       });
