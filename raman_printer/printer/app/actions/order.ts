@@ -125,7 +125,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
     const Settings = (await import('@/models/Settings')).default;
 
-    // Update permanent counters based on status change
+    // Update permanent counters based on status change (only increment, never decrement)
     if (status === 'COMPLETED' && oldStatus !== 'COMPLETED') {
       // Increment completed orders counter
       await Settings.findOneAndUpdate(
@@ -134,7 +134,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
         { upsert: true }
       );
 
-      // If payment is PAID, add to revenue
+      // If payment is already PAID, add to revenue (status=COMPLETED + payment=PAID)
       if (order.paymentStatus === 'PAID') {
         await Settings.findOneAndUpdate(
           {},
@@ -220,9 +220,11 @@ export async function deleteOrder(orderId: string) {
     }
 
     // Delete the order from database
+    // Note: OrderLog entry is NOT deleted to keep dashboard counters permanent (always increasing)
     await Order.findByIdAndDelete(orderId);
 
     revalidatePath('/admin');
+    revalidatePath('/admin/orders');
     return { success: true };
   } catch (error: any) {
     console.error('Delete order error:', error);
@@ -264,7 +266,8 @@ export async function updatePaymentStatus(
 
     await Order.findByIdAndUpdate(orderId, updateData);
 
-    // If payment just became PAID and order is COMPLETED, add to permanent revenue
+    // If payment just became PAID and order is already COMPLETED, add to revenue
+    // Revenue only updates when BOTH status=COMPLETED AND payment=PAID
     if (oldPaymentStatus !== 'PAID' && order.status === 'COMPLETED') {
       const Settings = (await import('@/models/Settings')).default;
       await Settings.findOneAndUpdate(

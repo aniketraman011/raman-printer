@@ -33,22 +33,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Incorrect password' }, { status: 401 });
     }
 
-    // Reset Settings counters - only reset totalOrders counter
-    // Other stats (completed, cancelled, revenue) are always fetched from database in real-time
-    const Order = (await import('@/models/Order')).default;
-    
-    const totalOrderLogs = await OrderLog.countDocuments({});
+    // Reset ALL dashboard counters to 0 completely
+    // Also clear OrderLog entries to reset time-based counters
+    await OrderLog.deleteMany({});
 
     await Settings.findOneAndUpdate(
       {},
       {
         $set: {
-          totalOrders: totalOrderLogs,
-        },
-        $unset: {
-          completedOrders: "",
-          cancelledOrders: "",
-          totalRevenue: "",
+          totalOrders: 0,
+          completedOrders: 0,
+          cancelledOrders: 0,
+          totalRevenue: 0,
         }
       },
       { upsert: true }

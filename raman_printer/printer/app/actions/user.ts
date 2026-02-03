@@ -184,10 +184,39 @@ export async function getAdminStats() {
       }
     }
     
-    // ALWAYS use current database counts for these stats (never use cached values)
-    const completedOrders = dbCompletedOrders;
-    const cancelledOrders = dbCancelledOrders;
-    const totalRevenue = dbPaidRevenue[0]?.total || 0;
+    // Use permanent counters from Settings (these only increment, never decrement)
+    // If Settings counters are not initialized, initialize them from current DB values
+    let completedOrders = settings.completedOrders || 0;
+    let cancelledOrders = settings.cancelledOrders || 0;
+    let totalRevenue = settings.totalRevenue || 0;
+    
+    // Initialize permanent counters from DB if they're 0 (first-time setup or migration)
+    if (completedOrders === 0 && dbCompletedOrders > 0) {
+      completedOrders = dbCompletedOrders;
+      await Settings.findOneAndUpdate(
+        {},
+        { $set: { completedOrders: completedOrders } },
+        { upsert: true }
+      );
+    }
+    
+    if (cancelledOrders === 0 && dbCancelledOrders > 0) {
+      cancelledOrders = dbCancelledOrders;
+      await Settings.findOneAndUpdate(
+        {},
+        { $set: { cancelledOrders: cancelledOrders } },
+        { upsert: true }
+      );
+    }
+    
+    if (totalRevenue === 0 && dbPaidRevenue[0]?.total > 0) {
+      totalRevenue = dbPaidRevenue[0].total;
+      await Settings.findOneAndUpdate(
+        {},
+        { $set: { totalRevenue: totalRevenue } },
+        { upsert: true }
+      );
+    }
     
     // Calculate pending revenue (UNPAID + PENDING payment status)
     const pendingRevenue = unpaidOrders.reduce((sum, order) => sum + order.totalAmount, 0);
