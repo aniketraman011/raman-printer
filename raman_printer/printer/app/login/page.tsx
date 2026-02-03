@@ -151,7 +151,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 to-slate-50 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
-          <Printer className="h-12 w-12 text-indigo-600 dark:text-indigo-400 mx-auto mb-4 animate-pulse" />
+          <div className="h-12 w-12 bg-indigo-600 dark:bg-indigo-400 rounded-lg mx-auto mb-4 animate-pulse"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
