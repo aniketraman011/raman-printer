@@ -11,7 +11,17 @@ export const maxDuration = 60; // 60 seconds for file upload
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
+    let formData;
+    try {
+      formData = await request.formData();
+    } catch (parseError: any) {
+      console.error('FormData parsing error:', parseError);
+      return NextResponse.json(
+        { error: 'Failed to parse form data. File may be too large or request malformed.' },
+        { status: 400 }
+      );
+    }
+    
     const files = formData.getAll('files') as File[];
 
     if (!files || files.length === 0) {
@@ -94,7 +104,15 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(bytes);
       const filePath = join(uploadDir, uniqueFilename);
 
-      await writeFile(filePath, buffer);
+      try {
+        await writeFile(filePath, buffer);
+      } catch (writeError: any) {
+        console.error('File write error:', writeError);
+        return NextResponse.json(
+          { error: `Failed to save file: ${file.name}. ${writeError.message}` },
+          { status: 500 }
+        );
+      }
 
       // Detect PDF page count
       let pageCount;
@@ -120,10 +138,10 @@ export async function POST(request: NextRequest) {
       success: true,
       files: uploadedFiles,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('File upload error:', error);
     return NextResponse.json(
-      { error: 'Failed to upload files' },
+      { error: error.message || 'Failed to upload files. Please try again.' },
       { status: 500 }
     );
   }
