@@ -162,9 +162,11 @@ export async function getAdminStats() {
         );
       }
     }
-    const completedOrders = settings.completedOrders || dbCompletedOrders;
-    const cancelledOrders = settings.cancelledOrders || dbCancelledOrders;
-    const totalRevenue = settings.totalRevenue || (dbPaidRevenue[0]?.total || 0);
+    
+    // ALWAYS use current database counts for these stats (never use cached values)
+    const completedOrders = dbCompletedOrders;
+    const cancelledOrders = dbCancelledOrders;
+    const totalRevenue = dbPaidRevenue[0]?.total || 0;
     
     // Calculate pending revenue (UNPAID + PENDING payment status)
     const pendingRevenue = unpaidOrders.reduce((sum, order) => sum + order.totalAmount, 0);

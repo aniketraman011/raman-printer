@@ -33,27 +33,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Incorrect password' }, { status: 401 });
     }
 
-    // Reset Settings counters to current actual values
+    // Reset Settings counters - only reset totalOrders counter
+    // Other stats (completed, cancelled, revenue) are always fetched from database in real-time
     const Order = (await import('@/models/Order')).default;
     
-    const [completedOrders, cancelledOrders, totalOrderLogs, paidRevenue] = await Promise.all([
-      Order.countDocuments({ status: 'COMPLETED' }),
-      Order.countDocuments({ status: 'CANCELLED' }),
-      OrderLog.countDocuments({}),
-      Order.aggregate([
-        { $match: { paymentStatus: 'PAID' } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-      ]),
-    ]);
+    const totalOrderLogs = await OrderLog.countDocuments({});
 
     await Settings.findOneAndUpdate(
       {},
       {
         $set: {
           totalOrders: totalOrderLogs,
-          completedOrders: completedOrders,
-          cancelledOrders: cancelledOrders,
-          totalRevenue: paidRevenue[0]?.total || 0,
+        },
+        $unset: {
+          completedOrders: "",
+          cancelledOrders: "",
+          totalRevenue: "",
         }
       },
       { upsert: true }
