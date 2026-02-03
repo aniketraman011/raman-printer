@@ -5,8 +5,8 @@ import connectDB from '@/lib/db';
 import Order from '@/models/Order';
 
 const razorpay = new Razorpay({
-  key_id: 'rzp_live_SB2OLoFt68Gc2C',
-  key_secret: '48XkDW65QjD7QkChRX2BY1xO',
+  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // Verify payment signature
     const sign = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSign = crypto
-      .createHmac('sha256', '48XkDW65QjD7QkChRX2BY1xO')
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
       .update(sign.toString())
       .digest('hex');
 

@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
     if (paymentMethod === 'RAZORPAY') {
       try {
         const razorpay = new Razorpay({
-          key_id: 'rzp_live_SB2OLoFt68Gc2C',
-          key_secret: '48XkDW65QjD7QkChRX2BY1xO',
+          key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+          key_secret: process.env.RAZORPAY_KEY_SECRET!,
         });
 
         const razorpayOrder = await razorpay.orders.create({

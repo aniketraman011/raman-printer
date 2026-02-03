@@ -274,7 +274,7 @@ export default function NewOrderPage() {
       if (paymentMethod === 'RAZORPAY') {
         // Initialize Razorpay payment
         const options = {
-          key: 'rzp_live_SB2OLoFt68Gc2C',
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
           amount: totalAmount * 100,
           currency: 'INR',
           name: 'Raman Prints',
