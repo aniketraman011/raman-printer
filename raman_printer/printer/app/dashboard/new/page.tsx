@@ -416,9 +416,7 @@ export default function NewOrderPage() {
               />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {files.some(f => f.type === 'application/pdf') 
-                ? '📄 Auto-detected from PDF' 
-                : 'Maximum 100 pages per order'}
+              Maximum 100 pages per order
             </p>
           </div>
 

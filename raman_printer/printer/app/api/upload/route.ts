@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
-const pdfParse = require('pdf-parse');
 
 // Configure route for large file uploads
 export const runtime = 'nodejs';
@@ -105,23 +104,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Detect PDF page count
-      let pageCount;
-      if (file.type === 'application/pdf') {
-        try {
-          const pdfData = await pdfParse(buffer);
-          pageCount = pdfData.numpages;
-        } catch (error) {
-          console.error('PDF parsing error:', error);
-          // If PDF parsing fails, pageCount will be undefined
-        }
-      }
-
+      // Note: PDF page detection removed due to Vercel serverless limitations
+      // Users must manually enter page count
       uploadedFiles.push({
         fileName: file.name,
         fileUrl: blob.url, // Use Vercel Blob URL
         fileSize: file.size,
-        pageCount, // Will be undefined for non-PDF files or if parsing fails
+        pageCount: undefined, // Will be undefined - user must enter manually
       });
     }
 
