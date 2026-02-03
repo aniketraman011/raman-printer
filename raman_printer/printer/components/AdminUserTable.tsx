@@ -69,7 +69,14 @@ export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps)
                   <p className="text-sm text-gray-900 dark:text-gray-300">{user.username}</p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <p className="text-sm text-gray-900 dark:text-gray-300">{user.whatsappNumber}</p>
+                  <a
+                    href={`https://wa.me/${user.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline"
+                  >
+                    {user.whatsappNumber}
+                  </a>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <p className="text-sm text-gray-900 dark:text-gray-300">{user.year}</p>

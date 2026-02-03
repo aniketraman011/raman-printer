@@ -34,9 +34,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Reset ALL dashboard counters to 0 completely
-    // Also clear OrderLog entries to reset time-based counters
+    // Clear OrderLog entries to reset time-based counters (24h, today)
     await OrderLog.deleteMany({});
 
+    // Reset all permanent counters in Settings to 0
     await Settings.findOneAndUpdate(
       {},
       {
