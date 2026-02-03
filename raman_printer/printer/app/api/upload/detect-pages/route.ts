@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 const pdfParse = require('pdf-parse');
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {

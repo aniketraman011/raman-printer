@@ -1,16 +1,7 @@
 {
   "functions": {
-    "app/api/upload/route.ts": {
-      "maxDuration": 60,
-      "memory": 1024
-    },
-    "app/api/upload/detect-pages/route.ts": {
-      "maxDuration": 30,
-      "memory": 512
-    },
-    "app/api/order/route.ts": {
-      "maxDuration": 30
+    "app/api/**/*.js": {
+      "maxDuration": 60
     }
-  },
-  "outputDirectory": ".next"
+  }
 }
