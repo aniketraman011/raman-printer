@@ -18,6 +18,27 @@ export async function registerUser(formData: FormData) {
       return { success: false, error: 'All fields are required' };
     }
 
+    // Validate password strength
+    if (password.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters long' };
+    }
+
+    // Validate username format
+    if (username.length < 3 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+      return { success: false, error: 'Username must be at least 3 characters and contain only letters, numbers, and underscores' };
+    }
+
+    // Validate WhatsApp number (10 digits)
+    if (!/^\d{10}$/.test(whatsappNumber.replace(/\D/g, ''))) {
+      return { success: false, error: 'Please enter a valid 10-digit WhatsApp number' };
+    }
+
+    // Validate year
+    const validYears = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Passout'];
+    if (!validYears.includes(year)) {
+      return { success: false, error: 'Please select a valid year' };
+    }
+
     await connectDB();
 
     // Check if username already exists
@@ -26,15 +47,15 @@ export async function registerUser(formData: FormData) {
       return { success: false, error: 'Username already taken' };
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password with stronger cost factor
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     await User.create({
-      fullName,
-      whatsappNumber,
+      fullName: fullName.trim(),
+      whatsappNumber: whatsappNumber.replace(/\D/g, ''),
       year,
-      username: username.toLowerCase(),
+      username: username.toLowerCase().trim(),
       password: hashedPassword,
       role: 'USER',
       isVerified: false,
@@ -44,7 +65,7 @@ export async function registerUser(formData: FormData) {
     return { success: true };
   } catch (error: any) {
     console.error('Registration error:', error);
-    return { success: false, error: error.message || 'Registration failed' };
+    return { success: false, error: 'Registration failed. Please try again.' };
   }
 }
 
@@ -236,24 +257,39 @@ export async function updateUserVerification(userId: string, isVerified: boolean
   }
 }
 
-export async function softDeleteUser(userId: string) {
+export async function deleteUser(userId: string) {
   try {
     const session = await auth();
     if (!session?.user || session.user.role !== 'ADMIN') {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Validate MongoDB ObjectId
+    if (!userId || typeof userId !== 'string' || userId.length !== 24) {
+      return { success: false, error: 'Invalid user ID' };
+    }
+
     await connectDB();
 
+    // Prevent deleting own account
+    if (userId === session.user.id) {
+      return { success: false, error: 'Cannot delete your own account' };
+    }
+
     // Hard delete user from database
-    await User.findByIdAndDelete(userId);
+    const result = await User.findByIdAndDelete(userId);
+    
+    if (!result) {
+      return { success: false, error: 'User not found' };
+    }
 
     revalidatePath('/admin');
     return { success: true };
   } catch (error: any) {
     console.error('Delete user error:', error);
-    return { success: false, error: error.message || 'Failed to delete user' };
+    return { success: false, error: 'Failed to delete user' };
   }
 }
 
-// Restore function removed - deletion is now permanent
+// Alias for backward compatibility
+export const softDeleteUser = deleteUser;

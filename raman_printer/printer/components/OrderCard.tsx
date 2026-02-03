@@ -16,7 +16,6 @@ interface OrderCardProps {
     fileName?: string;
     files?: OrderFile[];
     serviceItems?: Array<{name: string; price: number; quantity: number}>;
-    pageCount?: number;
     copyCount?: number;
     colorMode?: 'BW' | 'COLOR';
     totalAmount: number;
@@ -196,15 +195,6 @@ export default function OrderCard({ order }: OrderCardProps) {
 
       {/* Order Details */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        {order.pageCount && (
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Pages</p>
-              <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{order.pageCount}</p>
-            </div>
-          </div>
-        )}
         {order.copyCount && (
           <div className="flex items-center gap-2">
             <Copy className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />

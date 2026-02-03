@@ -1,22 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
-
-const razorpay = new Razorpay({
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = await request.json();
 
+    // Validate required fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !orderId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required payment verification fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid order ID' },
+        { status: 400 }
+      );
+    }
+
+    // Verify Razorpay secret is configured
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      console.error('RAZORPAY_KEY_SECRET is not configured');
+      return NextResponse.json(
+        { success: false, error: 'Payment verification configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Verify payment signature
     const sign = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSign = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(sign.toString())
       .digest('hex');
 
@@ -29,16 +49,24 @@ export async function POST(request: NextRequest) {
 
     // Payment verified - update order status
     await connectDB();
-    await Order.findByIdAndUpdate(orderId, {
-      paymentStatus: 'PAID',
-      razorpayPaymentId: razorpay_payment_id,
-    });
+    
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { status: 404 }
+      );
+    }
+
+    order.paymentStatus = 'PAID';
+    order.razorpayPaymentId = razorpay_payment_id;
+    await order.save();
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Razorpay verification error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Payment verification failed' },
+      { success: false, error: 'Payment verification failed' },
       { status: 500 }
     );
   }

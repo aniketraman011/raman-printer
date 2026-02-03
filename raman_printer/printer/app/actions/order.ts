@@ -168,27 +168,48 @@ export async function deleteOrder(orderId: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Validate MongoDB ObjectId
+    if (!orderId || typeof orderId !== 'string' || orderId.length !== 24) {
+      return { success: false, error: 'Invalid order ID' };
+    }
+
     await connectDB();
 
     // Get the order first to access file paths
     const order = await Order.findById(orderId);
     
-    if (order && order.files && order.files.length > 0) {
-      // Delete physical files from uploads folder
-      const fs = require('fs');
-      const path = require('path');
-      
+    if (!order) {
+      return { success: false, error: 'Order not found' };
+    }
+    
+    if (order.files && order.files.length > 0) {
       for (const file of order.files) {
         try {
-          // Extract filename from fileUrl (e.g., /uploads/filename.pdf -> filename.pdf)
-          const fileName = file.fileUrl.split('/').pop();
-          if (fileName) {
-            const filePath = path.join(process.cwd(), 'public', 'uploads', fileName);
-            
-            // Check if file exists before deleting
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-              console.log(`Deleted file: ${fileName}`);
+          const fileUrl = file.fileUrl;
+          
+          // Check if it's a Vercel Blob URL
+          if (fileUrl.includes('blob.vercel-storage.com') || fileUrl.includes('public.blob.vercel-storage.com')) {
+            // Delete from Vercel Blob storage
+            try {
+              const { del } = await import('@vercel/blob');
+              await del(fileUrl);
+              console.log(`Deleted Vercel Blob file: ${file.fileName}`);
+            } catch (blobError) {
+              console.error(`Error deleting Vercel Blob file ${file.fileName}:`, blobError);
+            }
+          } else if (fileUrl.startsWith('/uploads/')) {
+            // Delete local file from uploads folder
+            const fs = require('fs');
+            const path = require('path');
+            const fileName = fileUrl.split('/').pop();
+            if (fileName) {
+              const filePath = path.join(process.cwd(), 'public', 'uploads', fileName);
+              
+              // Check if file exists before deleting
+              if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                console.log(`Deleted local file: ${fileName}`);
+              }
             }
           }
         } catch (fileError) {
@@ -205,7 +226,7 @@ export async function deleteOrder(orderId: string) {
     return { success: true };
   } catch (error: any) {
     console.error('Delete order error:', error);
-    return { success: false, error: error.message || 'Failed to delete order' };
+    return { success: false, error: 'Failed to delete order' };
   }
 }
 

@@ -12,8 +12,20 @@ export async function POST(req: NextRequest) {
 
     const { message, rating } = await req.json();
 
-    if (!message || message.trim().length === 0) {
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'Feedback message is required' }, { status: 400 });
+    }
+
+    // Limit message length
+    if (message.length > 2000) {
+      return NextResponse.json({ success: false, error: 'Feedback message must be less than 2000 characters' }, { status: 400 });
+    }
+
+    // Validate rating if provided
+    if (rating !== undefined && rating !== null) {
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return NextResponse.json({ success: false, error: 'Rating must be between 1 and 5' }, { status: 400 });
+      }
     }
 
     await connectDB();
@@ -31,7 +43,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Feedback submission error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to submit feedback' }, { status: 500 });
   }
 }
 
@@ -45,7 +57,8 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const feedbacks = await Feedback.find({ userId: session.user.id })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(50); // Limit results
 
     return NextResponse.json({
       success: true,
@@ -53,6 +66,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Fetch feedbacks error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch feedbacks' }, { status: 500 });
   }
 }

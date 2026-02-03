@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileText, CreditCard, Banknote, Loader2 } from 'lucide-react';
+import { Upload, FileText, CreditCard, Banknote } from 'lucide-react';
 
 export default function NewOrderPage() {
   const router = useRouter();
@@ -13,7 +13,6 @@ export default function NewOrderPage() {
   const [printSide, setPrintSide] = useState<'SINGLE' | 'DOUBLE'>('SINGLE');
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [detectingPages, setDetectingPages] = useState(false);
   const [error, setError] = useState('');
   const [isCodEnabled, setIsCodEnabled] = useState(true);
   const [pricePerPage, setPricePerPage] = useState(2);
@@ -84,34 +83,6 @@ export default function NewOrderPage() {
       
       setFiles(selectedFiles);
       setError('');
-
-      // Auto-detect page count for PDFs
-      const pdfFiles = selectedFiles.filter(file => file.type === 'application/pdf');
-      if (pdfFiles.length > 0) {
-        setDetectingPages(true);
-        try {
-          const formData = new FormData();
-          pdfFiles.forEach((file) => {
-            formData.append('files', file);
-          });
-
-          const res = await fetch('/api/upload/detect-pages', {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            if (data.totalPages > 0) {
-              setPages(data.totalPages);
-            }
-          }
-        } catch (err) {
-          console.log('Could not auto-detect page count');
-        } finally {
-          setDetectingPages(false);
-        }
-      }
     }
   };
 
@@ -218,24 +189,6 @@ export default function NewOrderPage() {
 
       const uploadedFiles = await uploadRes.json();
 
-      // Auto-detect and use PDF page count if available
-      const firstPdfWithPages = uploadedFiles.files.find((f: any) => f.pageCount);
-      let finalPageCount = pages;
-      
-      if (firstPdfWithPages && firstPdfWithPages.pageCount) {
-        console.log('Detected PDF page count:', firstPdfWithPages.pageCount);
-        if (firstPdfWithPages.pageCount !== pages) {
-          const confirmProceed = confirm(
-            `Detected ${firstPdfWithPages.pageCount} pages in PDF. You entered ${pages} pages. Use detected value (${firstPdfWithPages.pageCount} pages)?`
-          );
-          if (confirmProceed) {
-            finalPageCount = firstPdfWithPages.pageCount;
-          }
-        } else {
-          finalPageCount = firstPdfWithPages.pageCount;
-        }
-      }
-
       // Create order
       const orderData = {
         files: uploadedFiles.files,
@@ -243,7 +196,7 @@ export default function NewOrderPage() {
           {
             name: 'B/W Printing',
             price: pricePerPage,
-            quantity: finalPageCount * copies,
+            quantity: pages * copies,
           },
           ...selectedServices.map(s => ({
             name: s.name,
@@ -251,7 +204,7 @@ export default function NewOrderPage() {
             quantity: s.quantity
           }))
         ],
-        totalAmount: finalPageCount * copies * pricePerPage + selectedServices.reduce((sum, s) => sum + (s.price * s.quantity), 0),
+        totalAmount: pages * copies * pricePerPage + selectedServices.reduce((sum, s) => sum + (s.price * s.quantity), 0),
         paymentMethod,
         printSide,
         message: message.trim() || undefined,
@@ -398,12 +351,6 @@ export default function NewOrderPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Number of Pages
-              {detectingPages && (
-                <span className="ml-2 inline-flex items-center text-indigo-600 dark:text-indigo-400">
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  Detecting...
-                </span>
-              )}
             </label>
             <div className="relative">
               <input

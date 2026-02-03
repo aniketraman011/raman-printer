@@ -235,10 +235,17 @@ All environment variables in `.env.local`:
 ```env
 MONGODB_URI=mongodb://localhost:27017/raman-prints
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=raman-prints-secret-key-2026-production
-NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_secret_key
+NEXTAUTH_SECRET=<generate-a-random-secret-using-openssl-rand-base64-32>
+NEXT_PUBLIC_RAZORPAY_KEY_ID=<your_razorpay_key_id>
+RAZORPAY_KEY_SECRET=<your_razorpay_secret_key>
+BLOB_READ_WRITE_TOKEN=<your_vercel_blob_token>
 ```
+
+> ⚠️ **SECURITY NOTE**: Generate a secure `NEXTAUTH_SECRET` using:
+> ```bash
+> openssl rand -base64 32
+> ```
+> Never commit `.env.local` to Git or share your secret keys.
 
 ---
 

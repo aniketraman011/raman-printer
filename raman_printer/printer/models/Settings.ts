@@ -58,12 +58,12 @@ const SettingsSchema = new Schema<ISettings>(
     },
     adminContactName: {
       type: String,
-      default: 'Raman Prints',
+      default: 'Admin',
       trim: true,
     },
     adminContactPhone: {
       type: String,
-      default: '+91 98765 43210',
+      default: '',
       trim: true,
     },
     totalRevenue: {
