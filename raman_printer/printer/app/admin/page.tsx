@@ -21,13 +21,26 @@ export default function AdminDashboard() {
 
   async function fetchStats() {
     try {
-      const res = await fetch('/api/admin/stats');
+      const res = await fetch('/api/admin/stats', {
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);
+      } else {
+        setMessage(data.error || 'Failed to load stats');
       }
-    } catch (error) {
-      console.error('Failed to load stats');
+    } catch (error: any) {
+      console.error('Failed to load stats:', error);
+      setMessage('Failed to load dashboard statistics. Please refresh the page.');
     } finally {
       setLoading(false);
     }
