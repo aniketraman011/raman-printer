@@ -107,6 +107,22 @@ export async function POST(request: NextRequest) {
       paymentStatus: paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',
     });
 
+    // Increment total orders counter in Settings
+    const Settings = (await import('@/models/Settings')).default;
+    await Settings.findOneAndUpdate(
+      {},
+      { $inc: { totalOrders: 1 } },
+      { upsert: true }
+    );
+
+    // Create an OrderLog entry for permanent tracking (survives order deletion)
+    const OrderLog = (await import('@/models/OrderLog')).default;
+    await OrderLog.create({
+      orderId: order._id,
+      totalAmount,
+      createdAt: order.createdAt,
+    });
+
     return NextResponse.json({
       success: true,
       orderId: order._id.toString(),
