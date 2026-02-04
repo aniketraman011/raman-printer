@@ -9,7 +9,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
-  const [showRevenue, setShowRevenue] = useState(true);
+  const [showRevenue, setShowRevenue] = useState(false);
   const [message, setMessage] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [resetPassword, setResetPassword] = useState('');

@@ -4,15 +4,27 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Printer, User, Lock, Eye, EyeOff } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      if (session.user.role === 'ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [session, status, router]);
 
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
@@ -50,6 +62,30 @@ function LoginForm() {
         router.push('/dashboard');
       }
     }
+  }
+
+  // Show loading while checking session status
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 to-slate-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If already authenticated, show redirecting message
+  if (status === 'authenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 to-slate-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

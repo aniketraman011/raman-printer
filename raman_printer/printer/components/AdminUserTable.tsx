@@ -15,10 +15,18 @@ interface AdminUserTableProps {
 export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps) {
   const [updating, setUpdating] = useState<string | null>(null);
 
-  async function handleVerification(userId: string, isVerified: boolean) {
+  async function handleVerification(userId: string, isVerified: boolean, userName: string, whatsappNumber: string) {
     setUpdating(userId);
     await updateUserVerification(userId, !isVerified);
     setUpdating(null);
+    
+    // If we just verified the user (they were not verified before), open WhatsApp
+    if (!isVerified) {
+      const message = encodeURIComponent(`${userName}, your account is verified now. Please logout and login again to update your status. Welcome to RAMAN PRINTS.`);
+      const phoneNumber = whatsappNumber.replace(/[^0-9]/g, '');
+      window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+    }
+    
     onUpdate();
   }
 
@@ -97,7 +105,7 @@ export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps)
                     {user.role !== 'ADMIN' && (
                       <>
                         <button
-                          onClick={() => handleVerification(user._id, user.isVerified)}
+                          onClick={() => handleVerification(user._id, user.isVerified, user.fullName, user.whatsappNumber)}
                           disabled={updating === user._id}
                           className={`hover:bg-opacity-10 p-2 rounded-lg transition-colors disabled:opacity-50 ${
                             user.isVerified
