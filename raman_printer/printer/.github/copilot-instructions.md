@@ -1,5 +1,7 @@
 # Raman Prints - AI Coding Agent Instructions
 
+🌐 **Live Demo**: [https://raman-printer.vercel.app/](https://raman-printer.vercel.app/)
+
 ## Project Overview
 Student printing service built with **Next.js 14 App Router**, MongoDB, NextAuth.js v5, and Razorpay. Two-tier architecture: student dashboards for ordering prints, admin panel for order/user management.
 

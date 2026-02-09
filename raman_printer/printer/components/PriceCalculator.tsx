@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { CreditCard } from 'lucide-react';
-import { calculatePrice, formatCurrency, PRICING } from '@/lib/constants';
+import { formatCurrency, PRICING } from '@/lib/constants';
 
 interface PriceCalculatorProps {
   pageCount: number;

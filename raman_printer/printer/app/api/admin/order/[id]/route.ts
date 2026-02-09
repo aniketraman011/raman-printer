@@ -33,6 +33,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         _id: order._id,
         files: order.files,
         serviceItems: order.serviceItems,
+        pages: order.pages,
+        copies: order.copies,
         totalAmount: order.totalAmount,
         paymentMethod: order.paymentMethod,
         status: order.status,

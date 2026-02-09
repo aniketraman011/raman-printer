@@ -10,6 +10,7 @@ interface DashboardNavProps {
   user: {
     name?: string | null;
     role?: string;
+    isVerified?: boolean;
   };
 }
 
@@ -41,6 +42,22 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
+              const isNewPrint = item.href === '/dashboard/new';
+              const isDisabled = isNewPrint && !user?.isVerified;
+              
+              if (isDisabled) {
+                return (
+                  <div
+                    key={item.href}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-600"
+                    title="Account verification required"
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </div>
+                );
+              }
+              
               return (
                 <Link
                   key={item.href}
@@ -79,6 +96,22 @@ export default function DashboardNav({ user }: DashboardNavProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
+            const isNewPrint = item.href === '/dashboard/new';
+            const isDisabled = isNewPrint && !user?.isVerified;
+            
+            if (isDisabled) {
+              return (
+                <div
+                  key={item.href}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg opacity-50 cursor-not-allowed text-gray-400 whitespace-nowrap"
+                  title="Account verification required"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm">{item.label}</span>
+                </div>
+              );
+            }
+            
             return (
               <Link
                 key={item.href}

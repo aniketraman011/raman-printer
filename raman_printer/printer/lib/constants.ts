@@ -13,6 +13,7 @@ export const ORDER_STATUS = {
 export const PAYMENT_STATUS = {
   PENDING: 'PENDING',
   PAID: 'PAID',
+  UNPAID: 'UNPAID',
   FAILED: 'FAILED',
 } as const;
 
@@ -63,6 +64,7 @@ export function getPaymentStatusColor(status: string): string {
   const colors: Record<string, string> = {
     PENDING: 'bg-yellow-100 text-yellow-800',
     PAID: 'bg-green-100 text-green-800',
+    UNPAID: 'bg-orange-100 text-orange-800',
     FAILED: 'bg-red-100 text-red-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';

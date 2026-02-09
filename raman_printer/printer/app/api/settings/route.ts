@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSettings } from '@/app/actions/settings';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const settings = await getSettings();
@@ -8,8 +10,11 @@ export async function GET() {
     return NextResponse.json({
       isCodEnabled: settings.isCodEnabled,
       isServiceAvailable: settings.isServiceAvailable,
+      serviceUnavailableMessage: settings.serviceUnavailableMessage || '',
       adminContactName: settings.adminContactName,
       adminContactPhone: settings.adminContactPhone,
+      adminContactAddress: settings.adminContactAddress || '',
+      globalMessage: settings.globalMessage || '',
       serviceItems: settings.serviceItems,
     });
   } catch (error) {

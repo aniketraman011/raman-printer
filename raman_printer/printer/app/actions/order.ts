@@ -19,6 +19,28 @@ export async function createOrder(data: {
 
     await connectDB();
 
+    // Check if user is verified
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(session.user.id);
+    if (!user || user.isDeleted) {
+      return { success: false, error: 'Your account has been deactivated.' };
+    }
+    if (!user.isVerified) {
+      return { success: false, error: 'Your account is pending verification.' };
+    }
+
+    // Check if service is available
+    const Settings = (await import('@/models/Settings')).default;
+    const settings = await Settings.findOne();
+    if (settings && !settings.isServiceAvailable) {
+      return { success: false, error: 'Service is currently unavailable.' };
+    }
+
+    // Validate payment method
+    if (!['RAZORPAY', 'COD'].includes(data.paymentMethod)) {
+      return { success: false, error: 'Invalid payment method' };
+    }
+
     const order = await Order.create({
       userId: session.user.id,
       files: data.files,
@@ -26,11 +48,10 @@ export async function createOrder(data: {
       totalAmount: data.totalAmount,
       paymentMethod: data.paymentMethod,
       status: 'PENDING',
-      paymentStatus: data.paymentMethod === 'COD' ? 'PENDING' : 'PENDING',
+      paymentStatus: data.paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',
     });
 
     // Increment total orders counter in Settings
-    const Settings = (await import('@/models/Settings')).default;
     await Settings.findOneAndUpdate(
       {},
       { $inc: { totalOrders: 1 } },
@@ -111,6 +132,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Validate status value
+    const validStatuses = ['PENDING', 'PRINTING', 'READY', 'COMPLETED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      return { success: false, error: 'Invalid order status' };
+    }
+
     await connectDB();
 
     const order = await Order.findById(orderId);
@@ -120,8 +147,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
     const oldStatus = order.status;
     
-    // Update order status
-    await Order.findByIdAndUpdate(orderId, { status });
+    // Update order status (and mark cancelApprovedByAdmin if cancelling)
+    const updateData: any = { status };
+    if (status === 'CANCELLED') {
+      updateData.cancelApprovedByAdmin = true;
+    }
+    await Order.findByIdAndUpdate(orderId, updateData);
 
     const Settings = (await import('@/models/Settings')).default;
 
@@ -248,6 +279,11 @@ export async function updatePaymentStatus(
     const order = await Order.findById(orderId);
     if (!order) {
       return { success: false, error: 'Order not found' };
+    }
+
+    // Verify ownership: only the order owner or admin can update payment
+    if (order.userId.toString() !== session.user.id && session.user.role !== 'ADMIN') {
+      return { success: false, error: 'Unauthorized' };
     }
 
     const oldPaymentStatus = order.paymentStatus;

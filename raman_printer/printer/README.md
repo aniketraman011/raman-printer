@@ -2,6 +2,8 @@
 
 A full-featured web application for student printing services built with Next.js 14, MongoDB, NextAuth.js v5, and Razorpay.
 
+🚀 **Live Demo**: [https://raman-printer.vercel.app/](https://raman-printer.vercel.app/)
+
 ## ✨ Features
 
 ### For Students

@@ -1,5 +1,7 @@
 # How to Change Site Icons (Favicon)
 
+🌐 **Live Application**: [https://raman-printer.vercel.app/](https://raman-printer.vercel.app/)
+
 The site icons are controlled through Next.js 14's built-in icon system.
 
 ## Current Icons

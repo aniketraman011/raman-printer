@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PlusCircle, History, AlertCircle, User, Phone } from 'lucide-react';
+import { PlusCircle, History, AlertCircle, User, Phone, MapPin, MessageSquare } from 'lucide-react';
 import { auth } from '@/auth';
 import { getSettings } from '@/app/actions/settings';
 
@@ -18,8 +18,23 @@ export default async function DashboardPage() {
         <div className="mb-6 bg-amber-400 dark:bg-amber-700 border-2 border-amber-600 dark:border-amber-600 rounded-lg p-6 shadow-lg">
           <p className="text-gray-900 dark:text-white font-bold text-xl text-center">⚠️ Service Currently Unavailable</p>
           <p className="text-gray-900 dark:text-amber-50 text-center mt-2">
-            Our printing service is temporarily unavailable. Orders may be delayed.
+            {settings.serviceUnavailableMessage || 'Our printing service is temporarily unavailable. Please check back later.'}
           </p>
+        </div>
+      )}
+
+      {/* Global Message from Admin */}
+      {settings.globalMessage && (
+        <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-6 shadow-lg">
+          <div className="flex items-start gap-4">
+            <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="font-bold text-blue-900 dark:text-blue-400 mb-2 text-lg">Important Notice</h3>
+              <p className="text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
+                {settings.globalMessage}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -145,6 +160,19 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Address - Full Width */}
+        {settings.adminContactAddress && (
+          <div className="mt-6 flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+            <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+              <MapPin className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Address</p>
+              <p className="text-lg font-medium text-gray-900 dark:text-white">{settings.adminContactAddress}</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

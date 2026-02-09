@@ -253,6 +253,7 @@ export async function getAllUsers() {
     await connectDB();
 
     const users = await User.find()
+      .select('-password')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -305,8 +306,8 @@ export async function deleteUser(userId: string) {
       return { success: false, error: 'Cannot delete your own account' };
     }
 
-    // Hard delete user from database
-    const result = await User.findByIdAndDelete(userId);
+    // Soft delete user (set isDeleted flag to preserve order references)
+    const result = await User.findByIdAndUpdate(userId, { isDeleted: true });
     
     if (!result) {
       return { success: false, error: 'User not found' };

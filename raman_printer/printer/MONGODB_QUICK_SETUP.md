@@ -1,5 +1,7 @@
 # MongoDB Quick Setup for Windows
 
+🌐 **Live Application**: [https://raman-printer.vercel.app/](https://raman-printer.vercel.app/)
+
 ## Option 1: Install MongoDB Locally (5 minutes) ✅ RECOMMENDED
 
 ### Step 1: Download MongoDB

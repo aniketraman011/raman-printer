@@ -16,6 +16,8 @@ export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   files: IOrderFile[];
   serviceItems: IServiceItem[];
+  pages?: number;
+  copies?: number;
   totalAmount: number;
   paymentMethod: 'RAZORPAY' | 'COD';
   status: 'PENDING' | 'PRINTING' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -67,6 +69,14 @@ const OrderSchema = new Schema<IOrder>(
         min: [1, 'Quantity must be at least 1'],
       },
     }],
+    pages: {
+      type: Number,
+      min: [1, 'Pages must be at least 1'],
+    },
+    copies: {
+      type: Number,
+      min: [1, 'Copies must be at least 1'],
+    },
     totalAmount: {
       type: Number,
       required: [true, 'Total amount is required'],
@@ -119,10 +129,5 @@ const OrderSchema = new Schema<IOrder>(
   }
 );
 
-// Delete the model from cache if it exists to ensure fresh schema
-if (mongoose.models.Order) {
-  delete mongoose.models.Order;
-}
-
-const Order = mongoose.model<IOrder>('Order', OrderSchema);
+const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export default Order as mongoose.Model<IOrder>;

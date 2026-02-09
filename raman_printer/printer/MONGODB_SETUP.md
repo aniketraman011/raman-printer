@@ -1,5 +1,7 @@
 # 📋 MongoDB Setup Instructions
 
+🌐 **Live Application**: [https://raman-printer.vercel.app/](https://raman-printer.vercel.app/)
+
 ## Option 1: Local MongoDB (Quick Testing)
 
 ### Step 1: Install MongoDB

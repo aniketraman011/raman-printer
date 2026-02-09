@@ -34,11 +34,9 @@ export default function NewOrderPage() {
     })
       .then(res => res.json())
       .then(data => {
-        console.log('Settings fetched:', data);
         setIsCodEnabled(data.isCodEnabled);
         // Get the current Black & White printing price
         const bwPrice = data.serviceItems?.find((item: any) => item.name.includes('Black & White'))?.price || 2;
-        console.log('Black & White price found:', bwPrice);
         setPricePerPage(bwPrice);
         // Store available service items (excluding B&W Printing)
         const otherServices = data.serviceItems?.filter((item: any) => !item.name.includes('Black & White')) || [];
@@ -184,7 +182,8 @@ export default function NewOrderPage() {
       });
 
       if (!uploadRes.ok) {
-        throw new Error('Failed to upload files');
+        const uploadError = await uploadRes.json().catch(() => null);
+        throw new Error(uploadError?.error || 'Failed to upload files. Please try again.');
       }
 
       const uploadedFiles = await uploadRes.json();
@@ -192,6 +191,8 @@ export default function NewOrderPage() {
       // Create order
       const orderData = {
         files: uploadedFiles.files,
+        pages,
+        copies,
         serviceItems: [
           {
             name: 'B/W Printing',
@@ -219,7 +220,8 @@ export default function NewOrderPage() {
       });
 
       if (!orderRes.ok) {
-        throw new Error('Failed to create order');
+        const orderError = await orderRes.json().catch(() => null);
+        throw new Error(orderError?.error || 'Failed to create order');
       }
 
       const order = await orderRes.json();

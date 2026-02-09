@@ -2,6 +2,8 @@
 
 ## 🎉 Status: FULLY WORKING
 
+🌐 **Live Demo**: [https://raman-printer.vercel.app/](https://raman-printer.vercel.app/)
+
 Your student printing service web application is **100% complete and running**!
 
 ---

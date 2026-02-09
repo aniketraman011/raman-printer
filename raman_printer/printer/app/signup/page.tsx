@@ -149,9 +149,9 @@ export default function SignupPage() {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   required
-                  minLength={6}
+                  minLength={8}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
-                  placeholder="Create a password (min 6 characters)"
+                  placeholder="Create a password (min 8 characters)"
                 />
                 <button
                   type="button"

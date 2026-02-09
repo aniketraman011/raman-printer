@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { files, serviceItems, totalAmount, paymentMethod, printSide, message } = body;
+    const { files, serviceItems, totalAmount, paymentMethod, printSide, message, pages, copies } = body;
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -90,7 +90,10 @@ export async function POST(request: NextRequest) {
         razorpayOrderId = razorpayOrder.id;
       } catch (rzpError) {
         console.error('Razorpay order creation error:', rzpError);
-        // Continue without Razorpay order ID if creation fails
+        return NextResponse.json(
+          { error: 'Payment gateway error. Please try again or use Cash on Delivery.' },
+          { status: 502 }
+        );
       }
     }
 
@@ -98,6 +101,8 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       files,
       serviceItems,
+      pages: pages || undefined,
+      copies: copies || undefined,
       totalAmount,
       paymentMethod,
       razorpayOrderId,

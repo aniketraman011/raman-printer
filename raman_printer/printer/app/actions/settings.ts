@@ -69,6 +69,9 @@ export async function updateSettings(data: {
   isCodEnabled?: boolean;
   adminContactName?: string;
   adminContactPhone?: string;
+  adminContactAddress?: string;
+  serviceUnavailableMessage?: string;
+  globalMessage?: string;
 }) {
   try {
     // Require admin authentication

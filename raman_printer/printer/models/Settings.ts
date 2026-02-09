@@ -9,9 +9,12 @@ export interface IServiceItem {
 export interface ISettings extends Document {
   serviceItems: IServiceItem[];
   isServiceAvailable: boolean;
+  serviceUnavailableMessage: string;
   isCodEnabled: boolean;
   adminContactName: string;
   adminContactPhone: string;
+  adminContactAddress: string;
+  globalMessage: string;
   totalRevenue: number;
   totalOrders: number;
   completedOrders: number;
@@ -52,6 +55,11 @@ const SettingsSchema = new Schema<ISettings>(
       type: Boolean,
       default: true,
     },
+    serviceUnavailableMessage: {
+      type: String,
+      default: 'Our printing service is temporarily unavailable. Please check back later.',
+      trim: true,
+    },
     isCodEnabled: {
       type: Boolean,
       default: true,
@@ -62,6 +70,16 @@ const SettingsSchema = new Schema<ISettings>(
       trim: true,
     },
     adminContactPhone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    adminContactAddress: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    globalMessage: {
       type: String,
       default: '',
       trim: true,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Plus, Trash2, Save, DollarSign, Power } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Save, DollarSign, Power, MessageSquare } from 'lucide-react';
 import { getSettings, updateSettings, addServiceItem, updateServiceItem, deleteServiceItem } from '@/app/actions/settings';
 
 interface ServiceItem {
@@ -13,9 +13,12 @@ interface ServiceItem {
 interface Settings {
   serviceItems: ServiceItem[];
   isServiceAvailable: boolean;
+  serviceUnavailableMessage: string;
   isCodEnabled: boolean;
   adminContactName: string;
   adminContactPhone: string;
+  adminContactAddress: string;
+  globalMessage: string;
 }
 
 export default function AdminSettingsPage() {
@@ -23,9 +26,11 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newService, setNewService] = useState({ name: '', price: '' });
-  const [adminContact, setAdminContact] = useState({ name: '', phone: '' });
+  const [adminContact, setAdminContact] = useState({ name: '', phone: '', address: '' });
   const [basePrintingPrice, setBasePrintingPrice] = useState('');
   const [message, setMessage] = useState('');
+  const [serviceUnavailableMessage, setServiceUnavailableMessage] = useState('');
+  const [globalMessage, setGlobalMessage] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -38,7 +43,10 @@ export default function AdminSettingsPage() {
       setAdminContact({
         name: data.adminContactName || 'Raman Prints',
         phone: data.adminContactPhone || '+91 98765 43210',
+        address: data.adminContactAddress || '',
       });
+      setServiceUnavailableMessage(data.serviceUnavailableMessage || 'Our printing service is temporarily unavailable. Please check back later.');
+      setGlobalMessage(data.globalMessage || '');
       
       // Find Black & White Printing price
       const bwPrinting = data.serviceItems.find((item: any) => item.name.includes('Black & White'));
@@ -149,6 +157,7 @@ export default function AdminSettingsPage() {
       const updated = await updateSettings({
         adminContactName: adminContact.name,
         adminContactPhone: adminContact.phone,
+        adminContactAddress: adminContact.address,
       });
       setSettings(updated);
       setMessage('Contact info updated successfully');
@@ -160,9 +169,39 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleUpdateServiceUnavailableMessage = async () => {
+    try {
+      setSaving(true);
+      const updated = await updateSettings({
+        serviceUnavailableMessage: serviceUnavailableMessage,
+      });
+      setSettings(updated);
+      setMessage('Service unavailable message updated successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      setMessage('Failed to update message');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateGlobalMessage = async () => {
+    try {
+      setSaving(true);
+      const updated = await updateSettings({
+        globalMessage: globalMessage,
+      });
+      setSettings(updated);
+      setMessage('Global message updated successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      setMessage('Failed to update global message');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleUpdateBasePrintingPrice = async () => {
-    console.log('Update Price button clicked!', { basePrintingPrice, settings });
-    
     const price = parseFloat(basePrintingPrice);
     if (!basePrintingPrice || isNaN(price) || price < 0) {
       setMessage('❌ Please enter a valid price');
@@ -174,15 +213,11 @@ export default function AdminSettingsPage() {
       setSaving(true);
       setMessage(''); // Clear any previous messages
       
-      console.log('Finding Black & White Printing service...');
       // Find the Black & White Printing service item index
       const bwIndex = settings?.serviceItems.findIndex(item => item.name.includes('Black & White'));
-      console.log('Found index:', bwIndex);
       
       if (bwIndex !== undefined && bwIndex >= 0) {
-        console.log('Updating service item at index', bwIndex, 'with price', price);
         const updated = await updateServiceItem(bwIndex, { price });
-        console.log('Update successful, new settings:', updated);
         
         setSettings(updated);
         
@@ -289,6 +324,33 @@ export default function AdminSettingsPage() {
               {settings.isServiceAvailable ? '✓ Service Available' : '✗ Service Unavailable'}
             </span>
           </div>
+
+          {/* Service Unavailable Message */}
+          {!settings.isServiceAvailable && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Service Unavailable Message
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                This message will be displayed to users when service is unavailable
+              </p>
+              <textarea
+                value={serviceUnavailableMessage}
+                onChange={(e) => setServiceUnavailableMessage(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="e.g., Our printing service is temporarily unavailable. Please check back later."
+              />
+              <button
+                onClick={handleUpdateServiceUnavailableMessage}
+                disabled={saving}
+                className="mt-3 bg-indigo-600 dark:bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Save Message
+              </button>
+            </div>
+          )}
         </div>
 
         {/* COD Toggle */}
@@ -411,6 +473,19 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Address
+            </label>
+            <textarea
+              value={adminContact.address}
+              onChange={(e) => setAdminContact({ ...adminContact, address: e.target.value })}
+              placeholder="e.g., Shop No. 5, College Road, City - 123456"
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
           <button
             onClick={handleUpdateAdminContact}
             disabled={saving}
@@ -418,6 +493,44 @@ export default function AdminSettingsPage() {
           >
             <Save className="h-4 w-4" />
             Save Contact Info
+          </button>
+        </div>
+
+        {/* Global Message for Users */}
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg shadow-sm p-6 mb-6 border-2 border-blue-200 dark:border-blue-800">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              Global Message for Users
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              This message will be displayed to all users on their dashboard homepage
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Message (leave empty to hide)
+            </label>
+            <textarea
+              value={globalMessage}
+              onChange={(e) => setGlobalMessage(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-3 border-2 border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+              placeholder="e.g., Due to high demand, orders may take 24-48 hours. Thank you for your patience!"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Leave blank to hide the message from users. Updates apply immediately after saving.
+            </p>
+          </div>
+
+          <button
+            onClick={handleUpdateGlobalMessage}
+            disabled={saving}
+            className="mt-4 bg-blue-600 dark:bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? 'Saving...' : 'Save Global Message'}
           </button>
         </div>
 
