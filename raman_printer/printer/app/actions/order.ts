@@ -3,78 +3,8 @@
 import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
+import mongoose from 'mongoose';
 import { revalidatePath } from 'next/cache';
-
-export async function createOrder(data: {
-  files: Array<{fileName: string; fileUrl: string; fileSize: number}>;
-  serviceItems: Array<{name: string; price: number; quantity: number}>;
-  totalAmount: number;
-  paymentMethod: 'RAZORPAY' | 'COD';
-}) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    await connectDB();
-
-    // Check if user is verified
-    const User = (await import('@/models/User')).default;
-    const user = await User.findById(session.user.id);
-    if (!user || user.isDeleted) {
-      return { success: false, error: 'Your account has been deactivated.' };
-    }
-    if (!user.isVerified) {
-      return { success: false, error: 'Your account is pending verification.' };
-    }
-
-    // Check if service is available
-    const Settings = (await import('@/models/Settings')).default;
-    const settings = await Settings.findOne();
-    if (settings && !settings.isServiceAvailable) {
-      return { success: false, error: 'Service is currently unavailable.' };
-    }
-
-    // Validate payment method
-    if (!['RAZORPAY', 'COD'].includes(data.paymentMethod)) {
-      return { success: false, error: 'Invalid payment method' };
-    }
-
-    const order = await Order.create({
-      userId: session.user.id,
-      files: data.files,
-      serviceItems: data.serviceItems,
-      totalAmount: data.totalAmount,
-      paymentMethod: data.paymentMethod,
-      status: 'PENDING',
-      paymentStatus: data.paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',
-    });
-
-    // Increment total orders counter in Settings
-    await Settings.findOneAndUpdate(
-      {},
-      { $inc: { totalOrders: 1 } },
-      { upsert: true }
-    );
-
-    // Create an OrderLog entry for permanent tracking (survives order deletion)
-    const OrderLog = (await import('@/models/OrderLog')).default;
-    await OrderLog.create({
-      orderId: order._id,
-      totalAmount: data.totalAmount,
-      createdAt: order.createdAt,
-    });
-
-    return {
-      success: true,
-      orderId: order._id.toString(),
-    };
-  } catch (error: any) {
-    console.error('Create order error:', error);
-    return { success: false, error: error.message || 'Failed to create order' };
-  }
-}
 
 export async function getUserOrders() {
   try {
@@ -107,8 +37,6 @@ export async function getAllOrders() {
     }
 
     await connectDB();
-
-    const User = (await import('@/models/User')).default;
 
     const orders = await Order.find()
       .populate('userId', 'fullName username whatsappNumber')
@@ -200,7 +128,7 @@ export async function deleteOrder(orderId: string) {
     }
 
     // Validate MongoDB ObjectId
-    if (!orderId || typeof orderId !== 'string' || orderId.length !== 24) {
+    if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
       return { success: false, error: 'Invalid order ID' };
     }
 
@@ -290,6 +218,7 @@ export async function updatePaymentStatus(
 
     const updateData: any = {
       paymentStatus: 'PAID',
+      paidAmount: order.totalAmount, // Mark the full amount as paid
     };
 
     // Only add Razorpay IDs if provided (for online payments)

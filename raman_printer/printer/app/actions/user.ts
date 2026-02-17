@@ -3,6 +3,7 @@
 import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 
@@ -274,6 +275,11 @@ export async function updateUserVerification(userId: string, isVerified: boolean
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Validate MongoDB ObjectId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return { success: false, error: 'Invalid user ID' };
+    }
+
     await connectDB();
 
     await User.findByIdAndUpdate(userId, { isVerified });
@@ -295,7 +301,7 @@ export async function deleteUser(userId: string) {
     }
 
     // Validate MongoDB ObjectId
-    if (!userId || typeof userId !== 'string' || userId.length !== 24) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return { success: false, error: 'Invalid user ID' };
     }
 
