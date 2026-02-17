@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileText, CreditCard, Banknote } from 'lucide-react';
+import { FileText, CreditCard, Banknote, Loader2 } from 'lucide-react';
+import { FileUpload } from '@/components/ui/file-upload';
 
 export default function NewOrderPage() {
   const router = useRouter();
@@ -15,33 +16,48 @@ export default function NewOrderPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [isCodEnabled, setIsCodEnabled] = useState(true);
+  const [isServiceAvailable, setIsServiceAvailable] = useState(true);
+  const [serviceUnavailableMessage, setServiceUnavailableMessage] = useState('');
   const [pricePerPage, setPricePerPage] = useState(2);
   const [loading, setLoading] = useState(true);
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [selectedServices, setSelectedServices] = useState<{id: string; name: string; price: number; quantity: number}[]>([]);
+  const [countingPages, setCountingPages] = useState(false);
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [pageDetails, setPageDetails] = useState<{name: string; pages: number; type: string}[]>([]);
+  const [detectedPages, setDetectedPages] = useState<number>(0);
 
   const printingCost = pages * copies * pricePerPage;
   const servicesCost = selectedServices.reduce((sum, s) => sum + (s.price * s.quantity), 0);
   const totalAmount = printingCost + servicesCost;
 
   useEffect(() => {
-    // Fetch settings to check if COD is enabled and get current price
+    // Check verification status
+    fetch('/api/user/profile')
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setIsVerified(data.user.isVerified === true);
+        } else {
+          setIsVerified(false);
+        }
+      })
+      .catch(() => setIsVerified(false));
+
+    // Fetch settings
     fetch('/api/settings', {
       cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
+      headers: { 'Cache-Control': 'no-cache' },
     })
       .then(res => res.json())
       .then(data => {
         setIsCodEnabled(data.isCodEnabled);
-        // Get the current Black & White printing price
+        setIsServiceAvailable(data.isServiceAvailable !== false);
+        setServiceUnavailableMessage(data.serviceUnavailableMessage || 'Service is currently unavailable. Please try again later.');
         const bwPrice = data.serviceItems?.find((item: any) => item.name.includes('Black & White'))?.price || 2;
         setPricePerPage(bwPrice);
-        // Store available service items (excluding B&W Printing)
         const otherServices = data.serviceItems?.filter((item: any) => !item.name.includes('Black & White')) || [];
         setAvailableServices(otherServices);
-        // If COD is disabled and currently selected, switch to RAZORPAY
         if (!data.isCodEnabled && paymentMethod === 'COD') {
           setPaymentMethod('RAZORPAY');
         }
@@ -50,53 +66,85 @@ export default function NewOrderPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      
-      // Validate maximum number of files
-      if (selectedFiles.length > 10) {
-        setError('Maximum 10 files allowed per upload');
-        e.target.value = '';
-        return;
+  // Auto-detect page count when files change
+  const handleFilesChange = async (newFiles: File[]) => {
+    setFiles(newFiles);
+    setError('');
+
+    if (newFiles.length === 0) {
+      setPages(1);
+      setDetectedPages(0);
+      setPageDetails([]);
+      return;
+    }
+
+    // Validate
+    if (newFiles.length > 10) {
+      setError('Maximum 10 files allowed per upload');
+      return;
+    }
+
+    const totalSize = newFiles.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > 100 * 1024 * 1024) {
+      setError('Total file size exceeds 100MB limit');
+      return;
+    }
+
+    const oversizedFile = newFiles.find(f => f.size > 20 * 1024 * 1024);
+    if (oversizedFile) {
+      setError(`File too large: ${oversizedFile.name}. Maximum size per file is 20MB`);
+      return;
+    }
+
+    // Auto page count detection
+    setCountingPages(true);
+    try {
+      const formData = new FormData();
+      newFiles.forEach(f => formData.append('files', f));
+
+      const res = await fetch('/api/page-count', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const rawPages = data.totalPages || 1;
+        setDetectedPages(rawPages);
+        setPageDetails(data.fileDetails || []);
+        // Apply double-sided logic
+        if (printSide === 'DOUBLE') {
+          setPages(Math.ceil(rawPages / 2));
+        } else {
+          setPages(rawPages);
+        }
       }
-      
-      // Validate total size
-      const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-      const maxTotalSize = 100 * 1024 * 1024; // 100MB
-      if (totalSize > maxTotalSize) {
-        setError('Total file size exceeds 100MB limit');
-        e.target.value = '';
-        return;
-      }
-      
-      // Validate individual file sizes
-      const maxFileSize = 20 * 1024 * 1024; // 20MB
-      const oversizedFile = selectedFiles.find(file => file.size > maxFileSize);
-      if (oversizedFile) {
-        setError(`File too large: ${oversizedFile.name}. Maximum size per file is 20MB`);
-        e.target.value = '';
-        return;
-      }
-      
-      setFiles(selectedFiles);
-      setError('');
+    } catch (err) {
+      console.error('Page count detection failed:', err);
+    } finally {
+      setCountingPages(false);
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
+  // When print side changes, adjust pages automatically
+  const handlePrintSideChange = (side: 'SINGLE' | 'DOUBLE') => {
+    setPrintSide(side);
+    if (detectedPages > 0) {
+      if (side === 'DOUBLE') {
+        setPages(Math.ceil(detectedPages / 2));
+      } else {
+        setPages(detectedPages);
+      }
+    }
   };
 
   const addServiceItem = (serviceName: string) => {
     const existing = selectedServices.find(s => s.name === serviceName);
     if (existing) {
-      // Increment quantity if already exists
-      setSelectedServices(selectedServices.map(s => 
+      setSelectedServices(selectedServices.map(s =>
         s.name === serviceName ? {...s, quantity: s.quantity + 1} : s
       ));
     } else {
-      // Add new service with quantity 1
       const service = availableServices.find(s => s.name === serviceName);
       if (service) {
         setSelectedServices([...selectedServices, {
@@ -114,11 +162,10 @@ export default function NewOrderPage() {
     const existing = selectedServices.find(s => s.name === serviceName);
     if (existing) {
       if (existing.quantity > 1) {
-        setSelectedServices(selectedServices.map(s => 
+        setSelectedServices(selectedServices.map(s =>
           s.name === serviceName ? {...s, quantity: s.quantity - 1} : s
         ));
       } else {
-        // Remove if quantity becomes 0
         setSelectedServices(selectedServices.filter(s => s.name !== serviceName));
       }
     }
@@ -126,16 +173,6 @@ export default function NewOrderPage() {
 
   const getServiceQuantity = (serviceName: string): number => {
     return selectedServices.find(s => s.name === serviceName)?.quantity || 0;
-  };
-
-  const removeServiceItem = (id: string) => {
-    setSelectedServices(selectedServices.filter(s => s.id !== id));
-  };
-
-  const updateServiceQuantity = (id: string, quantity: number) => {
-    setSelectedServices(selectedServices.map(s => 
-      s.id === id ? {...s, quantity: Math.max(1, quantity)} : s
-    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,8 +189,8 @@ export default function NewOrderPage() {
       return;
     }
 
-    if (pages > 100) {
-      setError('Maximum 100 pages allowed per order');
+    if (pages > 500) {
+      setError('Maximum 500 pages allowed per order');
       return;
     }
 
@@ -227,17 +264,15 @@ export default function NewOrderPage() {
       const order = await orderRes.json();
 
       if (paymentMethod === 'RAZORPAY') {
-        // Initialize Razorpay payment
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-          amount: totalAmount * 100,
+          amount: Math.round(totalAmount * 100),
           currency: 'INR',
           name: 'Raman Prints',
           description: 'Printing Service Payment',
           order_id: order.razorpayOrderId,
           handler: async function (response: any) {
             try {
-              // Payment successful - verify and update order
               const verifyRes = await fetch('/api/razorpay', {
                 method: 'POST',
                 headers: {
@@ -252,7 +287,6 @@ export default function NewOrderPage() {
               });
 
               if (verifyRes.ok) {
-                // Payment verified successfully
                 router.push('/dashboard/history');
               } else {
                 setError('Payment verification failed');
@@ -263,8 +297,6 @@ export default function NewOrderPage() {
           },
           modal: {
             ondismiss: function() {
-              // Order is already placed, redirect to history
-              // User can complete payment later
               router.push('/dashboard/history');
             }
           },
@@ -279,7 +311,6 @@ export default function NewOrderPage() {
         const razorpay = new (window as any).Razorpay(options);
         razorpay.open();
       } else {
-        // COD order created - redirect directly
         router.push('/dashboard/history');
       }
     } catch (err) {
@@ -288,6 +319,68 @@ export default function NewOrderPage() {
       setUploading(false);
     }
   };
+
+  // Show message for unverified users
+  if (isVerified === false && !loading) {
+    return (
+      <div className="max-w-2xl mx-auto animate-fade-in">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+          <div className="h-20 w-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="h-10 w-10 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Account Not Verified</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Your account needs to be verified by an admin before you can place orders. Please contact the admin for verification.
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message when service is unavailable
+  if (!isServiceAvailable && !loading) {
+    return (
+      <div className="max-w-2xl mx-auto animate-fade-in">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+          <div className="h-20 w-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="h-10 w-10 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Service Unavailable</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {serviceUnavailableMessage}
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while checking verification
+  if (loading || isVerified === null) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
@@ -301,71 +394,104 @@ export default function NewOrderPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* File Upload */}
+          {/* File Upload - New UI */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Upload className="inline w-4 h-4 mr-1" />
               Upload Files (PDF, DOC, DOCX, Images)
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-              Maximum 10 files, 100MB total (20MB per file)
-            </p>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,image/*"
-              onChange={handleFileChange}
-              className="block w-full text-sm text-gray-500 dark:text-gray-400
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-indigo-50 dark:file:bg-indigo-900/30 file:text-indigo-700 dark:file:text-indigo-400
-                hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/50"
-            />
+            <div className="border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
+              <FileUpload onChange={handleFilesChange} />
+            </div>
             {files.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {files.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg"
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{file.name}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        ({(file.size / 1024).toFixed(2)} KB)
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {files.length} file(s) selected
+              </p>
+            )}
+          </div>
+
+          {/* Auto Page Detection Info */}
+          {countingPages && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+              <span className="text-sm text-blue-700 dark:text-blue-300">Detecting page count...</span>
+            </div>
+          )}
+
+          {pageDetails.length > 0 && !countingPages && (
+            <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm font-medium text-green-800 dark:text-green-400 mb-1">
+                Auto-detected: {detectedPages} page{detectedPages > 1 ? 's' : ''}
+                {printSide === 'DOUBLE' && detectedPages > 0 && (
+                  <span className="text-xs ml-1">(→ {Math.ceil(detectedPages / 2)} sheets for double-sided)</span>
+                )}
+              </p>
+              <div className="text-xs text-green-700 dark:text-green-300 space-y-0.5">
+                {pageDetails.map((detail, idx) => (
+                  <p key={idx}>
+                    {detail.name}: {detail.pages} page{detail.pages > 1 ? 's' : ''}
+                    {detail.type !== 'application/pdf' && ' (estimated)'}
+                  </p>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Print Side - BEFORE pages */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Print Side
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => handlePrintSideChange('SINGLE')}
+                className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
+                  printSide === 'SINGLE'
+                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white border-indigo-600 dark:border-indigo-500'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
+                }`}
+              >
+                Single-sided
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrintSideChange('DOUBLE')}
+                className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
+                  printSide === 'DOUBLE'
+                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white border-indigo-600 dark:border-indigo-500'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
+                }`}
+              >
+                Double-sided
+              </button>
+            </div>
+            {printSide === 'DOUBLE' && detectedPages > 0 && (
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                Pages adjusted: {detectedPages} pages → {Math.ceil(detectedPages / 2)} sheets (double-sided)
+              </p>
             )}
           </div>
 
           {/* Number of Pages */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Number of Pages
+              Number of Pages {printSide === 'DOUBLE' ? '(sheets)' : ''}
             </label>
             <div className="relative">
               <input
                 type="number"
                 min="1"
-                max="100"
+                max="500"
                 value={pages}
-                onChange={(e) => setPages(e.target.value === '' ? 0 : parseInt(e.target.value))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setPages(isNaN(val) || val < 1 ? 1 : Math.min(val, 500));
+                }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Maximum 100 pages per order
+              Auto-detected from PDFs. You can adjust manually if needed.
             </p>
           </div>
 
@@ -379,41 +505,13 @@ export default function NewOrderPage() {
               min="1"
               max="20"
               value={copies}
-              onChange={(e) => setCopies(e.target.value === '' ? 0 : parseInt(e.target.value))}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setCopies(isNaN(val) || val < 1 ? 1 : Math.min(val, 20));
+              }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum 20 copies per order</p>
-          </div>
-
-          {/* Print Side */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Print Side
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setPrintSide('SINGLE')}
-                className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
-                  printSide === 'SINGLE'
-                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white border-indigo-600 dark:border-indigo-500'
-                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
-                }`}
-              >
-                Single-sided
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintSide('DOUBLE')}
-                className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
-                  printSide === 'DOUBLE'
-                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white border-indigo-600 dark:border-indigo-500'
-                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
-                }`}
-              >
-                Double-sided
-              </button>
-            </div>
           </div>
 
           {/* Additional Service Items */}

@@ -17,7 +17,12 @@ export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps)
 
   async function handleVerification(userId: string, isVerified: boolean, userName: string, whatsappNumber: string) {
     setUpdating(userId);
-    await updateUserVerification(userId, !isVerified);
+    const result = await updateUserVerification(userId, !isVerified);
+    if (!result.success) {
+      alert(result.error || 'Failed to update verification');
+      setUpdating(null);
+      return;
+    }
     setUpdating(null);
     
     // If we just verified the user (they were not verified before), open WhatsApp
@@ -36,7 +41,10 @@ export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps)
     }
 
     setUpdating(userId);
-    await softDeleteUser(userId);
+    const result = await softDeleteUser(userId);
+    if (!result.success) {
+      alert(result.error || 'Failed to delete user');
+    }
     setUpdating(null);
     onUpdate();
   }

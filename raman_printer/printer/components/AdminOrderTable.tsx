@@ -49,7 +49,10 @@ export default function AdminOrderTable({ orders, onUpdate }: AdminOrderTablePro
 
   async function handleStatusChange(orderId: string, newStatus: string) {
     setUpdating(orderId);
-    await updateOrderStatus(orderId, newStatus);
+    const result = await updateOrderStatus(orderId, newStatus);
+    if (!result.success) {
+      alert(result.error || 'Failed to update status');
+    }
     setUpdating(null);
     onUpdate();
   }
@@ -57,7 +60,10 @@ export default function AdminOrderTable({ orders, onUpdate }: AdminOrderTablePro
   async function handlePaymentStatusChange(orderId: string, newPaymentStatus: string) {
     setUpdating(orderId);
     if (newPaymentStatus === 'PAID') {
-      await updatePaymentStatus(orderId, '', '');
+      const result = await updatePaymentStatus(orderId, '', '');
+      if (!result.success) {
+        alert(result.error || 'Failed to update payment status');
+      }
     }
     setUpdating(null);
     onUpdate();
@@ -69,7 +75,10 @@ export default function AdminOrderTable({ orders, onUpdate }: AdminOrderTablePro
     }
 
     setUpdating(orderId);
-    await deleteOrder(orderId);
+    const result = await deleteOrder(orderId);
+    if (!result.success) {
+      alert(result.error || 'Failed to delete order');
+    }
     setUpdating(null);
     onUpdate();
   }
@@ -140,6 +149,15 @@ export default function AdminOrderTable({ orders, onUpdate }: AdminOrderTablePro
                   <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {formatCurrency(order.totalAmount)}
                   </span>
+                  {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (() => {
+                    const paid = order.paidAmount || 0;
+                    const remaining = order.totalAmount - paid;
+                    return remaining > 0 ? (
+                      <span className="block text-xs text-red-600 dark:text-red-400 font-semibold mt-0.5">
+                        {paid > 0 ? `Remaining: ${formatCurrency(remaining)}` : `Unpaid: ${formatCurrency(remaining)}`}
+                      </span>
+                    ) : null;
+                  })()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="space-y-1">
