@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     <>
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
       />
       <div className="min-h-screen bg-slate-50 dark:bg-gray-900 transition-colors duration-200">
         <DashboardNav user={session.user} />

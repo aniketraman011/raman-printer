@@ -19,6 +19,7 @@ export interface IOrder extends Document {
   pages?: number;
   copies?: number;
   totalAmount: number;
+  paidAmount: number;
   paymentMethod: 'RAZORPAY' | 'COD';
   status: 'PENDING' | 'PRINTING' | 'READY' | 'COMPLETED' | 'CANCELLED';
   paymentStatus: 'PENDING' | 'PAID' | 'UNPAID' | 'FAILED';
@@ -80,6 +81,10 @@ const OrderSchema = new Schema<IOrder>(
     totalAmount: {
       type: Number,
       required: [true, 'Total amount is required'],
+    },
+    paidAmount: {
+      type: Number,
+      default: 0,
     },
     paymentMethod: {
       type: String,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Copy, Download, XCircle, AlertTriangle, Eye } from 'lucide-react';
+import { FileText, Copy, Download, XCircle, AlertTriangle, Eye, CreditCard } from 'lucide-react';
 import { formatCurrency, getStatusColor, getPaymentStatusColor } from '@/lib/constants';
 
 interface OrderFile {
@@ -21,6 +21,7 @@ interface OrderCardProps {
     copyCount?: number;
     colorMode?: 'BW' | 'COLOR';
     totalAmount: number;
+    paidAmount?: number;
     status: string;
     paymentStatus: string;
     cancelRequested?: boolean;
@@ -31,7 +32,85 @@ interface OrderCardProps {
 
 export default function OrderCard({ order }: OrderCardProps) {
   const [cancelling, setCancelling] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [message, setMessage] = useState('');
+
+  const handlePayNow = async () => {
+    setPaying(true);
+    setMessage('');
+
+    // Check if Razorpay script is loaded
+    if (!(window as any).Razorpay) {
+      setMessage('Payment gateway is loading. Please try again in a moment.');
+      setPaying(false);
+      return;
+    }
+
+    try {
+      // Create a Razorpay order for this existing order
+      const res = await fetch('/api/order/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order._id }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        setMessage(data.error || 'Failed to initiate payment');
+        setPaying(false);
+        return;
+      }
+
+      // Open Razorpay checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        amount: Math.round(data.amount * 100),
+        currency: 'INR',
+        name: 'Raman Prints',
+        description: 'Printing Service Payment',
+        order_id: data.razorpayOrderId,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch('/api/razorpay', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderId: data.orderId,
+              }),
+            });
+
+            if (verifyRes.ok) {
+              setMessage('Payment successful!');
+              setTimeout(() => window.location.reload(), 2000);
+            } else {
+              setMessage('Payment verification failed');
+            }
+          } catch (err) {
+            setMessage('Payment verification failed');
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setPaying(false);
+          }
+        },
+        theme: {
+          color: '#4f46e5',
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      setMessage('Failed to initiate payment');
+      setPaying(false);
+    }
+  };
 
   const handleCancelRequest = async () => {
     if (!confirm('Are you sure you want to request cancellation of this order?')) {
@@ -137,6 +216,24 @@ export default function OrderCard({ order }: OrderCardProps) {
           <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold ${getPaymentStatusColor(order.paymentStatus)}`}>
             {order.paymentStatus}
           </span>
+          {/* Pay Remaining Balance / Pay Now Button */}
+          {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (() => {
+            const paid = order.paidAmount || 0;
+            const remaining = order.totalAmount - paid;
+            const label = paid > 0 && remaining > 0
+              ? `Pay Remaining ${formatCurrency(remaining)}`
+              : `Pay ${formatCurrency(order.totalAmount)}`;
+            return remaining > 0 ? (
+              <button
+                onClick={handlePayNow}
+                disabled={paying}
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 dark:bg-green-500 text-white rounded-full text-xs sm:text-sm font-semibold hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 transition-colors"
+              >
+                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                {paying ? 'Processing...' : label}
+              </button>
+            ) : null;
+          })()}
           {order.cancelRequested && (
             <span className="px-2.5 py-1 sm:px-3 sm:py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 text-xs font-semibold rounded-full">
               Cancel Requested
@@ -220,6 +317,26 @@ export default function OrderCard({ order }: OrderCardProps) {
           <p className="font-bold text-indigo-600 dark:text-indigo-400 text-base sm:text-lg">{formatCurrency(order.totalAmount)}</p>
         </div>
       </div>
+
+      {/* Remaining Balance Info */}
+      {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (() => {
+        const paid = order.paidAmount || 0;
+        const remaining = order.totalAmount - paid;
+        return remaining > 0 ? (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
+            {paid > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-amber-800 dark:text-amber-300 font-medium">Already Paid:</span>
+                <span className="text-amber-900 dark:text-amber-200 font-bold">{formatCurrency(paid)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-sm mt-1">
+              <span className="text-red-700 dark:text-red-400 font-bold">Remaining Balance:</span>
+              <span className="text-red-800 dark:text-red-300 font-bold text-base">{formatCurrency(remaining)}</span>
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       {/* Cancel Button */}
       {!isCancelled && order.status === 'PENDING' && !order.cancelRequested && (

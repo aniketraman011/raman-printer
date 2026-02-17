@@ -60,6 +60,9 @@ export async function POST(request: NextRequest) {
 
     order.paymentStatus = 'PAID';
     order.razorpayPaymentId = razorpay_payment_id;
+    // After successful payment, user has paid the full current total
+    // (Pay Now API always charges exactly totalAmount - paidAmount)
+    order.paidAmount = order.totalAmount;
     await order.save();
 
     return NextResponse.json({ success: true });

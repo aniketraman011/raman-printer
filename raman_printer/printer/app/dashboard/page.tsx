@@ -65,23 +65,35 @@ export default async function DashboardPage() {
 
       {/* New Print and My Orders Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* New Print Card */}
-        <Link
-          href="/dashboard/new"
-          className={`group bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border-2 border-transparent hover:border-indigo-600 dark:hover:border-indigo-500 hover:-translate-y-1 ${
-            !session?.user?.isVerified ? 'opacity-50 pointer-events-none' : ''
-          }`}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="h-20 w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500 transition-all duration-300 group-hover:scale-110">
-              <PlusCircle className="h-10 w-10 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors duration-300" />
+        {/* New Print Card - Hidden for unverified users */}
+        {session?.user?.isVerified ? (
+          <Link
+            href="/dashboard/new"
+            className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border-2 border-transparent hover:border-indigo-600 dark:hover:border-indigo-500 hover:-translate-y-1"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="h-20 w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500 transition-all duration-300 group-hover:scale-110">
+                <PlusCircle className="h-10 w-10 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors duration-300" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">New Print</h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Upload a document and place a new print order
+              </p>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">New Print</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Upload a document and place a new print order
-            </p>
+          </Link>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 border-2 border-gray-200 dark:border-gray-700 opacity-60">
+            <div className="flex flex-col items-center text-center">
+              <div className="h-20 w-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <PlusCircle className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-500 dark:text-gray-400 mb-2">New Print</h2>
+              <p className="text-gray-400 dark:text-gray-500 text-sm">
+                Account verification required to place orders
+              </p>
+            </div>
           </div>
-        </Link>
+        )}
 
         {/* My Orders Card */}
         <Link

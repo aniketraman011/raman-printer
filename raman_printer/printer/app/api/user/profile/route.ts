@@ -24,6 +24,7 @@ export async function GET() {
         whatsappNumber: user.whatsappNumber,
         year: user.year,
         username: user.username,
+        isVerified: user.isVerified,
       },
     });
   } catch (error: any) {
