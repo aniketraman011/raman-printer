@@ -72,6 +72,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if service is available
+    const Settings = (await import('@/models/Settings')).default;
+    const settings = await Settings.findOne();
+    if (settings && !settings.isServiceAvailable) {
+      return NextResponse.json(
+        { error: settings.serviceUnavailableMessage || 'Service is currently unavailable.' },
+        { status: 503 }
+      );
+    }
+
     // Create Razorpay order if payment method is RAZORPAY
     let razorpayOrderId = null;
     if (paymentMethod === 'RAZORPAY') {
@@ -82,7 +92,7 @@ export async function POST(request: NextRequest) {
         });
 
         const razorpayOrder = await razorpay.orders.create({
-          amount: totalAmount * 100, // amount in paise
+          amount: Math.round(totalAmount * 100), // amount in paise
           currency: 'INR',
           receipt: `order_${Date.now()}`,
         });
@@ -113,7 +123,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Increment total orders counter in Settings
-    const Settings = (await import('@/models/Settings')).default;
     await Settings.findOneAndUpdate(
       {},
       { $inc: { totalOrders: 1 } },

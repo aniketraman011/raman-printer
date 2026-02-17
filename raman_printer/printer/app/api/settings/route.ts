@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const settings = await getSettings();
     
-    return NextResponse.json({
+    const response = NextResponse.json({
       isCodEnabled: settings.isCodEnabled,
       isServiceAvailable: settings.isServiceAvailable,
       serviceUnavailableMessage: settings.serviceUnavailableMessage || '',
@@ -17,6 +17,11 @@ export async function GET() {
       globalMessage: settings.globalMessage || '',
       serviceItems: settings.serviceItems,
     });
+
+    // Cache for 30 seconds to reduce DB load, but allow revalidation
+    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+
+    return response;
   } catch (error) {
     console.error('Settings API error:', error);
     return NextResponse.json(
