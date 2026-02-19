@@ -27,7 +27,7 @@ export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps)
     
     // If we just verified the user (they were not verified before), open WhatsApp
     if (!isVerified) {
-      const message = encodeURIComponent(`${userName}, your account is verified now. Please logout and login again to update your status. Welcome to RAMAN PRINTS.`);
+      const message = encodeURIComponent(`${userName}, your account is verified now ✅. You can now place orders on RAMAN PRINTS. Welcome! 🖨️`);
       const phoneNumber = whatsappNumber.replace(/[^0-9]/g, '');
       window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
     }

@@ -37,16 +37,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { files, serviceItems, totalAmount, paymentMethod, printSide, message, pages, copies } = body;
 
-    if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: 'No files provided' },
-        { status: 400 }
-      );
-    }
+    const hasFiles = files && files.length > 0;
+    const hasServices = serviceItems && serviceItems.length > 0;
 
-    if (!serviceItems || serviceItems.length === 0) {
+    // Require either files or service items
+    if (!hasFiles && !hasServices) {
       return NextResponse.json(
-        { error: 'No service items provided' },
+        { error: 'Please provide files or select at least one service' },
         { status: 400 }
       );
     }
@@ -65,7 +62,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!printSide || !['SINGLE', 'DOUBLE'].includes(printSide)) {
+    // Only validate print settings if files are provided
+    if (hasFiles && (!printSide || !['SINGLE', 'DOUBLE'].includes(printSide))) {
       return NextResponse.json(
         { error: 'Invalid print side option' },
         { status: 400 }
@@ -109,14 +107,12 @@ export async function POST(request: NextRequest) {
 
     const order = await Order.create({
       userId: session.user.id,
-      files,
-      serviceItems,
-      pages: pages || undefined,
-      copies: copies || undefined,
+      ...(hasFiles ? { files } : {}),
+      serviceItems: serviceItems || [],
+      ...(hasFiles ? { pages: pages || undefined, copies: copies || undefined, printSide } : {}),
       totalAmount,
       paymentMethod,
       razorpayOrderId,
-      printSide,
       message: message || undefined,
       status: 'PENDING',
       paymentStatus: paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',

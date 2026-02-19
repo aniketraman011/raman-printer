@@ -54,19 +54,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role;
         token.username = user.username;
         token.isVerified = user.isVerified;
+        token.lastRefresh = Date.now();
       }
       
-      // Refresh user data from database to get latest verification status
-      if (token.id && trigger === 'update') {
-        try {
-          await connectDB();
-          const dbUser = await User.findById(token.id);
-          if (dbUser) {
-            token.isVerified = dbUser.isVerified;
-            token.role = dbUser.role;
+      // Auto-refresh user data from database every 30 seconds
+      // So users don't need to logout/login to see updated verification status
+      if (token.id) {
+        const now = Date.now();
+        const lastRefresh = (token.lastRefresh as number) || 0;
+        if (trigger === 'update' || !lastRefresh || now - lastRefresh > 30000) {
+          try {
+            await connectDB();
+            const dbUser = await User.findById(token.id);
+            if (dbUser) {
+              token.isVerified = dbUser.isVerified;
+              token.role = dbUser.role;
+              token.name = dbUser.fullName;
+            }
+            token.lastRefresh = now;
+          } catch (error) {
+            console.error('JWT refresh error:', error);
           }
-        } catch (error) {
-          console.error('JWT refresh error:', error);
         }
       }
       

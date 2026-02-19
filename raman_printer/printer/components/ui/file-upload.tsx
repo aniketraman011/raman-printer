@@ -19,7 +19,7 @@ export const FileUpload = ({
   onChange,
   accept,
   maxFiles = 10,
-  maxSize = 20 * 1024 * 1024,
+  maxSize = 4 * 1024 * 1024,
 }: {
   onChange?: (files: File[]) => void;
   accept?: Record<string, string[]>;
@@ -109,7 +109,7 @@ export const FileUpload = ({
             Drag or drop your files here or click to upload
           </p>
           <p className="relative z-20 mt-1 font-sans text-xs text-neutral-400 dark:text-neutral-500">
-            PDF, DOC, DOCX, Images • Max 10 files • 20MB each
+            PDF, DOC, DOCX, Images • Max 10 files • 4MB each
           </p>
           <div className="relative mx-auto mt-10 w-full max-w-xl">
             {files.length > 0 &&

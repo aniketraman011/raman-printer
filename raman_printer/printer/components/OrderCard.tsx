@@ -368,51 +368,51 @@ export default function OrderCard({ order, userPhone = '' }: OrderCardProps) {
 
       {/* Progress Bar */}
       {!isCancelled ? (
-        <div className="relative overflow-x-auto -mx-2 px-2">
-          <div className="flex items-center justify-between min-w-max sm:min-w-0">
+        <div className="overflow-x-auto -mx-2 px-2">
+          <div className="flex items-start min-w-[260px]">
             {statusSteps.map((step, index) => {
-              const isActive = index <= currentStepIndex;
+              const isPast = index <= currentStepIndex;
+              const isCompleted = index < currentStepIndex;
               const isReady = step.value === 'READY' && order.status === 'READY';
 
               return (
-                <div key={step.value} className="flex flex-col items-center flex-1 px-1 group/step relative" title={step.tooltip}>
-                  <div
-                    title={step.tooltip}
-                    className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-all cursor-help ${
-                      isActive
-                        ? isReady
-                          ? 'bg-green-500 text-white animate-pulse-green ring-4 ring-green-200 dark:ring-green-800'
-                          : 'bg-indigo-600 dark:bg-indigo-500 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                    }`}
-                  >
-                    {index + 1}
+                <div key={step.value} className="contents">
+                  {/* Step circle + label */}
+                  <div className="flex flex-col items-center flex-shrink-0" title={step.tooltip}>
+                    <div
+                      className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all cursor-help z-10 ${
+                        isPast
+                          ? isReady
+                            ? 'bg-green-500 text-white ring-4 ring-green-200 dark:ring-green-800'
+                            : 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+                    <p
+                      className={`text-[10px] sm:text-xs mt-1.5 font-medium whitespace-nowrap ${
+                        isPast ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {step.label}
+                    </p>
                   </div>
-                  <p
-                    className={`text-[10px] sm:text-xs mt-1.5 sm:mt-2 font-medium whitespace-nowrap ${
-                      isActive ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
-                    }`}
-                  >
-                    {step.label}
-                  </p>
+
+                  {/* Connector line between steps */}
                   {index < statusSteps.length - 1 && (
                     <div
-                      className={`absolute top-4 sm:top-5 h-0.5 transition-all ${
-                        index < currentStepIndex ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'
+                      className={`flex-1 h-0.5 mt-[18px] sm:mt-5 mx-0.5 transition-colors duration-500 ${
+                        isCompleted
+                          ? 'bg-indigo-600 dark:bg-indigo-500'
+                          : 'bg-gray-200 dark:bg-gray-700'
                       }`}
-                      style={{
-                        left: `${(index + 0.5) * (100 / statusSteps.length)}%`,
-                        width: `${100 / statusSteps.length}%`,
-                      }}
                     />
                   )}
                 </div>
               );
             })}
           </div>
-
-          {/* Connecting Lines */}
-          <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700 -z-10" />
         </div>
       ) : (
         <div className="text-center py-4 bg-red-50 dark:bg-red-900/30 rounded-lg">

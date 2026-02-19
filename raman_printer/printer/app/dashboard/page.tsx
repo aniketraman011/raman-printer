@@ -45,7 +45,7 @@ export default async function DashboardPage() {
             <div className="flex-1">
               <h3 className="font-bold text-yellow-900 dark:text-yellow-500 mb-1">Account Pending Verification</h3>
               <p className="text-yellow-900 dark:text-yellow-100 mb-3">
-                Your account is awaiting admin approval. You will be able to place orders once verified. If you are already verified then logout and login again.
+                Your account is awaiting admin approval. You will be able to place orders once verified. Your status updates automatically — just refresh the page.
               </p>
               <a
                 href={`https://wa.me/${settings.adminContactPhone?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Please verify my account: ${session?.user?.name}.`)}`}
