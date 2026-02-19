@@ -28,9 +28,10 @@ interface OrderCardProps {
     cancelApprovedByAdmin?: boolean;
     createdAt: string;
   };
+  userPhone?: string;
 }
 
-export default function OrderCard({ order }: OrderCardProps) {
+export default function OrderCard({ order, userPhone = '' }: OrderCardProps) {
   const [cancelling, setCancelling] = useState(false);
   const [paying, setPaying] = useState(false);
   const [message, setMessage] = useState('');
@@ -99,6 +100,9 @@ export default function OrderCard({ order }: OrderCardProps) {
             setPaying(false);
           }
         },
+        prefill: {
+          contact: userPhone,
+        },
         theme: {
           color: '#4f46e5',
         },
@@ -166,10 +170,10 @@ export default function OrderCard({ order }: OrderCardProps) {
     }
   };
   const statusSteps = [
-    { label: 'Placed', value: 'PENDING' },
-    { label: 'Printing', value: 'PRINTING' },
-    { label: 'Ready', value: 'READY' },
-    { label: 'Picked Up', value: 'COMPLETED' },
+    { label: 'Placed', value: 'PENDING', tooltip: 'Your order has been received and is waiting to be printed.' },
+    { label: 'Printing', value: 'PRINTING', tooltip: 'Your order is currently being printed. Please wait.' },
+    { label: 'Ready', value: 'READY', tooltip: 'Your order is printed and ready for pickup.' },
+    { label: 'Picked Up', value: 'COMPLETED', tooltip: 'Your order has been picked up and is now complete.' },
   ];
 
   const currentStepIndex = statusSteps.findIndex((step) => step.value === order.status);
@@ -371,9 +375,10 @@ export default function OrderCard({ order }: OrderCardProps) {
               const isReady = step.value === 'READY' && order.status === 'READY';
 
               return (
-                <div key={step.value} className="flex flex-col items-center flex-1 px-1">
+                <div key={step.value} className="flex flex-col items-center flex-1 px-1 group/step relative" title={step.tooltip}>
                   <div
-                    className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-all ${
+                    title={step.tooltip}
+                    className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm transition-all cursor-help ${
                       isActive
                         ? isReady
                           ? 'bg-green-500 text-white animate-pulse-green ring-4 ring-green-200 dark:ring-green-800'

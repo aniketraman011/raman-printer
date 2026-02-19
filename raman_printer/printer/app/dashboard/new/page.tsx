@@ -1,14 +1,163 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { FileUpload } from '@/components/ui/file-upload';
 
+function ScrollableNumberInput({
+  value,
+  onChange,
+  min,
+  max,
+  disabled = false,
+}: {
+  value: number;
+  onChange: (val: number) => void;
+  min: number;
+  max: number;
+  disabled?: boolean;
+}) {
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const stopAutoChange = () => {
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+  };
+
+  useEffect(() => {
+    return () => stopAutoChange();
+  }, []);
+
+  // Keep editValue in sync when value changes externally (e.g. from buttons)
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(String(value));
+    }
+  }, [value, isEditing]);
+
+  // Add non-passive wheel listener for preventing scroll
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (disabled) return;
+      e.preventDefault();
+      if (e.deltaY < 0) onChange(Math.min(value + 1, max));
+      else onChange(Math.max(value - 1, min));
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [value, min, max, disabled, onChange]);
+
+  const startAutoChange = (direction: 'up' | 'down') => {
+    stopAutoChange();
+    let localValue = value;
+    const doAction = () => {
+      localValue = direction === 'up' ? Math.min(localValue + 1, max) : Math.max(localValue - 1, min);
+      onChange(localValue);
+    };
+    doAction();
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(doAction, 80);
+    }, 400);
+  };
+
+  const commitEdit = () => {
+    setIsEditing(false);
+    const parsed = parseInt(editValue, 10);
+    if (isNaN(parsed)) {
+      setEditValue(String(value));
+      return;
+    }
+    const clamped = Math.max(min, Math.min(max, parsed));
+    onChange(clamped);
+    setEditValue(String(clamped));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commitEdit();
+      inputRef.current?.blur();
+    } else if (e.key === 'Escape') {
+      setEditValue(String(value));
+      setIsEditing(false);
+      inputRef.current?.blur();
+    }
+  };
+
+  return (
+    <div className={`transition-all duration-300 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+      <div ref={containerRef} className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onMouseDown={() => startAutoChange('down')}
+          onMouseUp={stopAutoChange}
+          onMouseLeave={stopAutoChange}
+          onTouchStart={(e) => { e.preventDefault(); startAutoChange('down'); }}
+          onTouchEnd={stopAutoChange}
+          disabled={disabled || value <= min}
+          className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 active:scale-90 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-2xl font-bold select-none border border-red-200 dark:border-red-800"
+        >
+          −
+        </button>
+        <div
+          className="flex-1 flex items-center justify-center px-4 py-2.5 sm:py-3 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl min-w-[80px] hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors cursor-text"
+          onClick={() => {
+            if (!disabled) {
+              setIsEditing(true);
+              setTimeout(() => inputRef.current?.select(), 0);
+            }
+          }}
+        >
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="number"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              min={min}
+              max={max}
+              className="w-full text-center text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tabular-nums bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          ) : (
+            <span
+              key={value}
+              className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tabular-nums animate-number-pop"
+            >
+              {value}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onMouseDown={() => startAutoChange('up')}
+          onMouseUp={stopAutoChange}
+          onMouseLeave={stopAutoChange}
+          onTouchStart={(e) => { e.preventDefault(); startAutoChange('up'); }}
+          onTouchEnd={stopAutoChange}
+          disabled={disabled || value >= max}
+          className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 active:scale-90 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-2xl font-bold select-none border border-green-200 dark:border-green-800"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function NewOrderPage() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
-  const [pages, setPages] = useState<number>(1);
+  const [pages, setPages] = useState<number>(0);
   const [copies, setCopies] = useState<number>(1);
   const [paymentMethod, setPaymentMethod] = useState<'RAZORPAY' | 'COD'>('RAZORPAY');
   const [printSide, setPrintSide] = useState<'SINGLE' | 'DOUBLE'>('SINGLE');
@@ -26,18 +175,23 @@ export default function NewOrderPage() {
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const [pageDetails, setPageDetails] = useState<{name: string; pages: number; type: string}[]>([]);
   const [detectedPages, setDetectedPages] = useState<number>(0);
+  const [userPhone, setUserPhone] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
 
-  const printingCost = pages * copies * pricePerPage;
+  const hasFiles = files.length > 0;
+  const printingCost = hasFiles ? pages * copies * pricePerPage : 0;
   const servicesCost = selectedServices.reduce((sum, s) => sum + (s.price * s.quantity), 0);
   const totalAmount = printingCost + servicesCost;
 
   useEffect(() => {
-    // Check verification status
+    // Check verification status and prefetch user details for Razorpay
     fetch('/api/user/profile')
       .then(res => res.json())
       .then(data => {
         if (data.user) {
           setIsVerified(data.user.isVerified === true);
+          setUserPhone(data.user.whatsappNumber || '');
+          setUserName(data.user.fullName || '');
         } else {
           setIsVerified(false);
         }
@@ -72,7 +226,7 @@ export default function NewOrderPage() {
     setError('');
 
     if (newFiles.length === 0) {
-      setPages(1);
+      setPages(0);
       setDetectedPages(0);
       setPageDetails([]);
       return;
@@ -85,14 +239,14 @@ export default function NewOrderPage() {
     }
 
     const totalSize = newFiles.reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > 100 * 1024 * 1024) {
-      setError('Total file size exceeds 100MB limit');
+    if (totalSize > 40 * 1024 * 1024) {
+      setError('Total file size exceeds 40MB limit');
       return;
     }
 
-    const oversizedFile = newFiles.find(f => f.size > 20 * 1024 * 1024);
+    const oversizedFile = newFiles.find(f => f.size > 4 * 1024 * 1024);
     if (oversizedFile) {
-      setError(`File too large: ${oversizedFile.name}. Maximum size per file is 20MB`);
+      setError(`File too large: ${oversizedFile.name}. Maximum size per file is 4MB`);
       return;
     }
 
@@ -179,22 +333,22 @@ export default function NewOrderPage() {
     e.preventDefault();
     setError('');
 
-    if (files.length === 0) {
-      setError('Please upload at least one file');
+    if (files.length === 0 && selectedServices.length === 0) {
+      setError('Please upload files or select at least one service');
       return;
     }
 
-    if (pages < 1) {
+    if (files.length > 0 && pages < 1) {
       setError('Please enter valid number of pages');
       return;
     }
 
-    if (pages > 500) {
-      setError('Maximum 500 pages allowed per order');
+    if (pages > 199) {
+      setError('Maximum 199 pages allowed per order');
       return;
     }
 
-    if (copies < 1) {
+    if (files.length > 0 && copies < 1) {
       setError('Please enter valid number of copies');
       return;
     }
@@ -207,44 +361,50 @@ export default function NewOrderPage() {
     try {
       setUploading(true);
 
-      // Upload files
-      const formData = new FormData();
-      files.forEach((file) => {
-        formData.append('files', file);
-      });
+      let uploadedFiles = null;
 
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      // Upload files if any
+      if (files.length > 0) {
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append('files', file);
+        });
 
-      if (!uploadRes.ok) {
-        const uploadError = await uploadRes.json().catch(() => null);
-        throw new Error(uploadError?.error || 'Failed to upload files. Please try again.');
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const uploadError = await uploadRes.json().catch(() => null);
+          throw new Error(uploadError?.error || 'Failed to upload files. Please try again.');
+        }
+
+        uploadedFiles = await uploadRes.json();
       }
 
-      const uploadedFiles = await uploadRes.json();
+      // Build service items
+      const serviceItems = [];
+      if (files.length > 0) {
+        serviceItems.push({
+          name: 'B/W Printing',
+          price: pricePerPage,
+          quantity: pages * copies,
+        });
+      }
+      serviceItems.push(...selectedServices.map(s => ({
+        name: s.name,
+        price: s.price,
+        quantity: s.quantity
+      })));
 
       // Create order
       const orderData = {
-        files: uploadedFiles.files,
-        pages,
-        copies,
-        serviceItems: [
-          {
-            name: 'B/W Printing',
-            price: pricePerPage,
-            quantity: pages * copies,
-          },
-          ...selectedServices.map(s => ({
-            name: s.name,
-            price: s.price,
-            quantity: s.quantity
-          }))
-        ],
-        totalAmount: pages * copies * pricePerPage + selectedServices.reduce((sum, s) => sum + (s.price * s.quantity), 0),
+        ...(uploadedFiles ? { files: uploadedFiles.files } : {}),
+        ...(files.length > 0 ? { pages, copies, printSide } : {}),
+        serviceItems,
+        totalAmount,
         paymentMethod,
-        printSide,
         message: message.trim() || undefined,
       };
 
@@ -301,7 +461,8 @@ export default function NewOrderPage() {
             }
           },
           prefill: {
-            name: order.userName,
+            name: order.userName || userName,
+            contact: userPhone,
           },
           theme: {
             color: '#4f46e5',
@@ -398,7 +559,9 @@ export default function NewOrderPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Upload Files (PDF, DOC, DOCX, Images)
+              <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">— optional for service-only orders</span>
             </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Max 10 files, 4 MB each</p>
             <div className="border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
               <FileUpload onChange={handleFilesChange} />
             </div>
@@ -437,9 +600,9 @@ export default function NewOrderPage() {
           )}
 
           {/* Print Side - BEFORE pages */}
-          <div>
+          <div className={`transition-all duration-300 ${!hasFiles ? 'opacity-40 pointer-events-none' : ''}`}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Print Side
+              Print Side {!hasFiles && <span className="text-xs text-gray-400 ml-1">(upload files first)</span>}
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button
@@ -473,43 +636,33 @@ export default function NewOrderPage() {
           </div>
 
           {/* Number of Pages */}
-          <div>
+          <div className={`transition-all duration-300 ${!hasFiles ? 'opacity-40 pointer-events-none' : ''}`}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Number of Pages {printSide === 'DOUBLE' ? '(sheets)' : ''}
+              Number of Pages {printSide === 'DOUBLE' ? '(sheets)' : ''} {!hasFiles && <span className="text-xs text-gray-400 ml-1">(upload files first)</span>}
             </label>
-            <div className="relative">
-              <input
-                type="number"
-                min="1"
-                max="500"
-                value={pages}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  setPages(isNaN(val) || val < 1 ? 1 : Math.min(val, 500));
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
+            <ScrollableNumberInput
+              value={pages}
+              onChange={(val) => setPages(val)}
+              min={hasFiles ? 1 : 0}
+              max={199}
+              disabled={!hasFiles}
+            />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Auto-detected from PDFs. You can adjust manually if needed.
             </p>
           </div>
 
           {/* Number of Copies */}
-          <div>
+          <div className={`transition-all duration-300 ${!hasFiles ? 'opacity-40 pointer-events-none' : ''}`}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Number of Copies
+              Number of Copies {!hasFiles && <span className="text-xs text-gray-400 ml-1">(upload files first)</span>}
             </label>
-            <input
-              type="number"
-              min="1"
-              max="20"
+            <ScrollableNumberInput
               value={copies}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                setCopies(isNaN(val) || val < 1 ? 1 : Math.min(val, 20));
-              }}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              onChange={(val) => setCopies(val)}
+              min={1}
+              max={20}
+              disabled={!hasFiles}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum 20 copies per order</p>
           </div>
@@ -599,7 +752,12 @@ export default function NewOrderPage() {
               </span>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-1">
-              <p>Printing: {pages} pages × {copies} copies × ₹{pricePerPage} = ₹{printingCost}</p>
+              {hasFiles && (
+                <p>Printing: {pages} pages × {copies} copies × ₹{pricePerPage} = ₹{printingCost}</p>
+              )}
+              {!hasFiles && selectedServices.length > 0 && (
+                <p className="text-xs text-gray-500">Service-only order (no printing)</p>
+              )}
               {selectedServices.length > 0 && (
                 <>
                   {selectedServices.map((s) => (
@@ -653,7 +811,7 @@ export default function NewOrderPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={uploading || files.length === 0}
+            disabled={uploading || (files.length === 0 && selectedServices.length === 0)}
             className="w-full bg-indigo-600 dark:bg-indigo-500 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98] shadow-lg hover:shadow-xl"
           >
             {uploading ? (

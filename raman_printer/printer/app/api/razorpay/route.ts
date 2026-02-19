@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
 import mongoose from 'mongoose';
@@ -22,6 +23,12 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Invalid order ID' },
         { status: 400 }
       );
+    }
+
+    // Require authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     // Verify Razorpay secret is configured
@@ -56,6 +63,11 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
+    }
+
+    // Ensure the order belongs to the authenticated user
+    if (order.userId.toString() !== session.user.id) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
     order.paymentStatus = 'PAID';
