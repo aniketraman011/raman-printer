@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
-import Razorpay from 'razorpay';
+import { getRazorpayClient } from '@/lib/razorpay';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,10 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const razorpay = new Razorpay({
-        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-        key_secret: process.env.RAZORPAY_KEY_SECRET!,
-      });
+      const razorpay = getRazorpayClient();
 
       const razorpayOrder = await razorpay.orders.create({
         amount: Math.round(totalRemaining * 100), // amount in paise

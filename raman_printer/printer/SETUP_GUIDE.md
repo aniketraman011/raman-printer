@@ -51,8 +51,8 @@ Get-Service MongoDB
 1. Create a free cluster at [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas)
 2. Create a database user with read/write access
 3. Whitelist your IP (or `0.0.0.0/0` for all IPs)
-4. Get connection string: `mongodb+srv://user:password@cluster.mongodb.net/ramanprints`
-5. Update `MONGODB_URI` in `.env.local`
+4. Get connection string from Atlas dashboard (looks like: `mongodb+srv://<USERNAME>:<PASSWORD>@<CLUSTER>.mongodb.net/ramanprints`)
+5. Update `MONGODB_URI` in `.env.local` with your actual connection string
 
 ## 4. Start the App
 

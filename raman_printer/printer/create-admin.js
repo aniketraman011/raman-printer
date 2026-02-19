@@ -1,11 +1,51 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
+const path = require('path');
 const readline = require('readline');
 
-// Load environment variables manually
-const envContent = fs.readFileSync('.env.local', 'utf8');
-const MONGODB_URI = envContent.match(/MONGODB_URI=(.+)/)[1].trim();
+/**
+ * Parse a .env file into an object, handling:
+ * - comments (#)
+ * - quoted values ("..." or '...')
+ * - inline comments after value
+ */
+function parseEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Environment file not found: ${filePath}\nCopy .env.example to .env.local and fill in your values.`);
+  }
+  const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+  const env = {};
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    let value = trimmed.slice(eqIndex + 1).trim();
+    // Strip wrapping quotes
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    } else {
+      // Strip trailing inline comments
+      const commentIdx = value.indexOf(' #');
+      if (commentIdx !== -1) value = value.slice(0, commentIdx).trim();
+    }
+    env[key] = value;
+  }
+  return env;
+}
+
+// Load environment variables from .env.local
+const envPath = path.resolve(__dirname, '.env.local');
+const envVars = parseEnvFile(envPath);
+const MONGODB_URI = envVars.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not set in .env.local');
+  process.exit(1);
+}
 
 const UserSchema = new mongoose.Schema(
   {

@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
 import User from '@/models/User';
-import Razorpay from 'razorpay';
+import { getRazorpayClient } from '@/lib/razorpay';
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,10 +84,7 @@ export async function POST(request: NextRequest) {
     let razorpayOrderId = null;
     if (paymentMethod === 'RAZORPAY') {
       try {
-        const razorpay = new Razorpay({
-          key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-          key_secret: process.env.RAZORPAY_KEY_SECRET!,
-        });
+        const razorpay = getRazorpayClient();
 
         const razorpayOrder = await razorpay.orders.create({
           amount: Math.round(totalAmount * 100), // amount in paise

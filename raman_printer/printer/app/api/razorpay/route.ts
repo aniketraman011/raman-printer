@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
 import mongoose from 'mongoose';
+import { getRazorpaySecret } from '@/lib/razorpay';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,8 +32,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify Razorpay secret is configured
-    if (!process.env.RAZORPAY_KEY_SECRET) {
+    // Verify payment signature (throws if RAZORPAY_KEY_SECRET is not configured)
+    let razorpaySecret: string;
+    try {
+      razorpaySecret = getRazorpaySecret();
+    } catch {
       console.error('RAZORPAY_KEY_SECRET is not configured');
       return NextResponse.json(
         { success: false, error: 'Payment verification configuration error' },
@@ -40,10 +44,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify payment signature
     const sign = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSign = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', razorpaySecret)
       .update(sign.toString())
       .digest('hex');
 

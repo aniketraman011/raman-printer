@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { env } from '@/lib/env';
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -16,11 +17,7 @@ async function connectDB() {
     return cached.conn;
   }
 
-  const MONGODB_URI = process.env.MONGODB_URI;
-
-  if (!MONGODB_URI) {
-    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-  }
+  const MONGODB_URI = env.MONGODB_URI;
 
   if (!cached.promise) {
     const opts = {
