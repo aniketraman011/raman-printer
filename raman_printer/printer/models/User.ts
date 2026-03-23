@@ -60,6 +60,10 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
+// Pre-optimized single-field indexes
+UserSchema.index({ role: 1 });
+UserSchema.index({ createdAt: -1 });
+
 // Prevent model recompilation in development
 const User = (mongoose.models && mongoose.models.User) || mongoose.model<IUser>('User', UserSchema);
 export default User as mongoose.Model<IUser>;

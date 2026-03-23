@@ -30,6 +30,7 @@ export interface IOrder extends Document {
   cancelApprovedByAdmin?: boolean;
   printSide: 'SINGLE' | 'DOUBLE';
   message?: string;
+  printedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -128,11 +129,19 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       trim: true,
     },
+    printedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// High-Performance Indexes for critical application paths
+OrderSchema.index({ userId: 1, createdAt: -1 }); // Dashboards
+OrderSchema.index({ status: 1, createdAt: -1 }); // Auto-print queue poller
+OrderSchema.index({ razorpayOrderId: 1 }); // Webhook fulfillment
 
 const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export default Order as mongoose.Model<IOrder>;

@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Printer, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { Printer, User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 
 function LoginForm() {
@@ -173,8 +173,9 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>

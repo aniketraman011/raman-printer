@@ -74,8 +74,8 @@ export default function AdminNav({ user }: AdminNavProps) {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center space-x-1 pb-3 overflow-x-auto">
+        {/* Mobile Navigation (Bottom Fixed Bar) */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 flex justify-around items-center h-16 px-2 pb-[env(safe-area-inset-bottom,0.5rem)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -83,14 +83,16 @@ export default function AdminNav({ user }: AdminNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center w-full h-full py-1 transition-colors ${
                   isActive
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                <span className="text-sm">{item.label}</span>
+                <div className={`relative flex items-center justify-center p-1 rounded-full ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>
+                  <Icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                </div>
+                <span className={`text-[10px] mt-0.5 ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
               </Link>
             );
           })}

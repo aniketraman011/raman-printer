@@ -13,6 +13,16 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const statusParam = params.get('status');
+      if (statusParam === 'pending' || statusParam === 'verified') {
+        setStatusFilter(statusParam);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     async function fetchUsers() {
       const result = await getAllUsers();
       if (result.success) {
@@ -22,6 +32,12 @@ export default function AdminUsersPage() {
     }
 
     fetchUsers();
+
+    const intervalId = setInterval(() => {
+      fetchUsers();
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const filteredUsers = users.filter((user) => {

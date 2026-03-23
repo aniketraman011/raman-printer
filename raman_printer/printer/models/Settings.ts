@@ -10,6 +10,9 @@ export interface ISettings extends Document {
   serviceItems: IServiceItem[];
   isServiceAvailable: boolean;
   serviceUnavailableMessage: string;
+  isAutoPrintEnabled: boolean;
+  autoPrinterName: string;
+  autoPrintDelaySeconds: number;
   isCodEnabled: boolean;
   adminContactName: string;
   adminContactPhone: string;
@@ -54,6 +57,19 @@ const SettingsSchema = new Schema<ISettings>(
     isServiceAvailable: {
       type: Boolean,
       default: true,
+    },
+    isAutoPrintEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    autoPrinterName: {
+      type: String,
+      default: 'SumatraPDF',
+      trim: true,
+    },
+    autoPrintDelaySeconds: {
+      type: Number,
+      default: 10,
     },
     serviceUnavailableMessage: {
       type: String,
@@ -110,5 +126,10 @@ const SettingsSchema = new Schema<ISettings>(
   }
 );
 
-const Settings = (mongoose.models && mongoose.models.Settings) || mongoose.model<ISettings>('Settings', SettingsSchema);
-export default Settings as mongoose.Model<ISettings>;
+// Force clear Mongoose model cache for hot reloads
+if (mongoose.models && mongoose.models.Settings) {
+  delete mongoose.models.Settings;
+}
+
+const Settings = mongoose.model<ISettings>('Settings', SettingsSchema);
+export default Settings;

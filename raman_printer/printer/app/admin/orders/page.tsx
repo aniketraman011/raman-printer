@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { getAllOrders } from '@/app/actions/order';
+import { getSettings } from '@/app/actions/settings';
 import AdminOrderTable from '@/components/AdminOrderTable';
-import { Package, Search, Filter } from 'lucide-react';
+import { Package, Search, Filter, Printer, Loader2, AlertTriangle } from 'lucide-react';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -11,17 +12,49 @@ export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [isAutoPrintEnabled, setIsAutoPrintEnabled] = useState(false);
+  const [autoPrintDelaySeconds, setAutoPrintDelaySeconds] = useState(10);
 
   useEffect(() => {
-    async function fetchOrders() {
-      const result = await getAllOrders();
-      if (result.success) {
-        setOrders(result.orders || []);
+    async function fetchData() {
+      const [ordersResult, settingsResult] = await Promise.all([
+        getAllOrders(),
+        getSettings()
+      ]);
+      
+      if (ordersResult.success) {
+        setOrders(ordersResult.orders || []);
+      }
+      if (settingsResult) {
+        setIsAutoPrintEnabled(settingsResult.isAutoPrintEnabled);
+        setAutoPrintDelaySeconds(settingsResult.autoPrintDelaySeconds || 10);
       }
       setLoading(false);
     }
 
-    fetchOrders();
+    fetchData();
+
+    // 15-second Auto-Refresh & Background Print Trigger
+    const intervalId = setInterval(async () => {
+      const [ordersResult, settingsResult] = await Promise.all([
+        getAllOrders(),
+        getSettings()
+      ]);
+      
+      if (ordersResult.success) {
+        setOrders(ordersResult.orders || []);
+      }
+      
+      if (settingsResult) {
+        setIsAutoPrintEnabled(settingsResult.isAutoPrintEnabled);
+        setAutoPrintDelaySeconds(settingsResult.autoPrintDelaySeconds || 10);
+      }
+      
+      // Ping the stateless auto-printing worker
+      fetch('/api/admin/auto-print').catch((e) => console.error('Ping failed:', e));
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const filteredOrders = orders.filter((order) => {
@@ -61,10 +94,27 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Orders Management ({orders.length})
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center justify-between w-full">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Orders Management ({orders.length})
+            </h1>
+            
+            {/* Auto-Print Banner Indicator */}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${isAutoPrintEnabled ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' : 'bg-transparent text-gray-400 border-gray-600 dark:text-gray-400 dark:border-gray-700'}`}>
+              {isAutoPrintEnabled ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-purple-600 dark:text-purple-400" />
+                  <span>Auto-Print: <strong>ACTIVE</strong></span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="opacity-90">Auto-Print: DISABLED</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-4 items-center">
@@ -131,7 +181,7 @@ export default function AdminOrdersPage() {
           </p>
         </div>
       ) : (
-        <AdminOrderTable orders={filteredOrders} onUpdate={() => window.location.reload()} />
+        <AdminOrderTable orders={filteredOrders} isAutoPrintEnabled={isAutoPrintEnabled} autoPrintDelaySeconds={autoPrintDelaySeconds} onUpdate={() => window.location.reload()} />
       )}
     </div>
   );

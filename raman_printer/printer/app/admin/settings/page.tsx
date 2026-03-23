@@ -1,36 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Plus, Trash2, Save, DollarSign, Power, MessageSquare } from 'lucide-react';
-import { getSettings, updateSettings, addServiceItem, updateServiceItem, deleteServiceItem } from '@/app/actions/settings';
-
-interface ServiceItem {
-  name: string;
-  price: number;
-  isActive: boolean;
-}
-
-interface Settings {
-  serviceItems: ServiceItem[];
-  isServiceAvailable: boolean;
-  serviceUnavailableMessage: string;
-  isCodEnabled: boolean;
-  adminContactName: string;
-  adminContactPhone: string;
-  adminContactAddress: string;
-  globalMessage: string;
-}
+import { useState, useEffect } from 'react';
+import { Save, Printer, CreditCard, Store, Smartphone, Plus, Trash2, MonitorCheck, MessageSquare } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { getSettings, updateSettings, addServiceItem as addService, updateServiceItem, deleteServiceItem as deleteService } from '@/app/actions/settings';
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  
   const [newService, setNewService] = useState({ name: '', price: '' });
-  const [adminContact, setAdminContact] = useState({ name: '', phone: '', address: '' });
-  const [basePrintingPrice, setBasePrintingPrice] = useState('');
-  const [message, setMessage] = useState('');
-  const [serviceUnavailableMessage, setServiceUnavailableMessage] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [autoPrinterName, setAutoPrinterName] = useState('HP Ink Tank 310 series');
+  const [autoPrintDelaySeconds, setAutoPrintDelaySeconds] = useState(10);
   const [globalMessage, setGlobalMessage] = useState('');
+  const [serviceUnavailableMessage, setServiceUnavailableMessage] = useState('');
+  
+  // Track local edits for prices before saving
+  const [localServices, setLocalServices] = useState<any[]>([]);
 
   useEffect(() => {
     loadSettings();
@@ -40,606 +27,459 @@ export default function AdminSettingsPage() {
     try {
       const data = await getSettings();
       setSettings(data);
-      setAdminContact({
-        name: data.adminContactName || 'Raman Prints',
-        phone: data.adminContactPhone || '+91 98765 43210',
-        address: data.adminContactAddress || '',
-      });
-      setServiceUnavailableMessage(data.serviceUnavailableMessage || 'Our printing service is temporarily unavailable. Please check back later.');
+      setLocalServices(data.serviceItems || []);
+      setWhatsappNumber(data.adminContactPhone || '');
+      setAutoPrinterName(data.autoPrinterName || 'HP Ink Tank 310 series');
+      setAutoPrintDelaySeconds(data.autoPrintDelaySeconds || 10);
       setGlobalMessage(data.globalMessage || '');
-      
-      // Find Black & White Printing price
-      const bwPrinting = data.serviceItems.find((item: any) => item.name.includes('Black & White'));
-      setBasePrintingPrice(bwPrinting?.price?.toString() || '2');
+      setServiceUnavailableMessage(data.serviceUnavailableMessage || 'Our printing service is temporarily unavailable.');
     } catch (error) {
-      console.error('Load settings error:', error);
-      setMessage('Failed to load settings');
+      toast.error('Failed to load settings');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleServiceAvailability = async () => {
-    if (!settings) return;
-    
+  const handleToggle = async (key: string, value: boolean) => {
     try {
-      setSaving(true);
-      const updated = await updateSettings({
-        isServiceAvailable: !settings.isServiceAvailable,
-      });
+      const updated = await updateSettings({ [key]: value });
       setSettings(updated);
-      setMessage('Service availability updated successfully');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success('Settings updated successfully');
     } catch (error) {
-      setMessage('Failed to update service availability');
-    } finally {
-      setSaving(false);
+      toast.error('Failed to update settings');
     }
   };
 
-  const handleToggleCod = async () => {
-    if (!settings) return;
-    
+  const handleUpdateContact = async () => {
     try {
-      setSaving(true);
-      const updated = await updateSettings({
-        isCodEnabled: !settings.isCodEnabled,
-      });
+      if (!whatsappNumber.trim()) {
+        toast.error('Number cannot be empty');
+        return;
+      }
+      const updated = await updateSettings({ adminContactPhone: whatsappNumber });
       setSettings(updated);
-      setMessage('COD setting updated successfully');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success('Support contact updated');
     } catch (error) {
-      setMessage('Failed to update COD setting');
-    } finally {
-      setSaving(false);
+      toast.error('Failed to update contact');
     }
   };
 
-  const handleAddService = async () => {
-    if (!newService.name || !newService.price) {
-      setMessage('Please enter service name and price');
-      return;
-    }
-
+  const handleUpdatePrinterName = async () => {
     try {
-      setSaving(true);
-      const updated = await addServiceItem(newService.name, parseFloat(newService.price));
+      if (!autoPrinterName.trim()) {
+        toast.error('Printer name cannot be empty');
+        return;
+      }
+      const updated = await updateSettings({ autoPrinterName });
       setSettings(updated);
-      setNewService({ name: '', price: '' });
-      setMessage('Service added successfully');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success('Auto-Printer name updated');
     } catch (error) {
-      setMessage('Failed to add service');
-    } finally {
-      setSaving(false);
+      toast.error('Failed to update printer');
     }
   };
 
-  const handleUpdateService = async (index: number, data: Partial<ServiceItem>) => {
+  const handleUpdateDelay = async () => {
     try {
-      setSaving(true);
-      const updated = await updateServiceItem(index, data);
+      if (autoPrintDelaySeconds < 0) return;
+      const updated = await updateSettings({ autoPrintDelaySeconds });
       setSettings(updated);
-      setMessage('Service updated successfully');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success('Auto-print delay updated');
     } catch (error) {
-      console.error('Update service error:', error);
-      setMessage('Failed to update service');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteService = async (index: number) => {
-    if (!confirm('Are you sure you want to delete this service?')) return;
-
-    try {
-      setSaving(true);
-      const updated = await deleteServiceItem(index);
-      setSettings(updated);
-      setMessage('Service deleted successfully');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      setMessage('Failed to delete service');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUpdateAdminContact = async () => {
-    if (!adminContact.name || !adminContact.phone) {
-      setMessage('Please enter both name and phone');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const updated = await updateSettings({
-        adminContactName: adminContact.name,
-        adminContactPhone: adminContact.phone,
-        adminContactAddress: adminContact.address,
-      });
-      setSettings(updated);
-      setMessage('Contact info updated successfully');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      setMessage('Failed to update contact info');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUpdateServiceUnavailableMessage = async () => {
-    try {
-      setSaving(true);
-      const updated = await updateSettings({
-        serviceUnavailableMessage: serviceUnavailableMessage,
-      });
-      setSettings(updated);
-      setMessage('Service unavailable message updated successfully');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      setMessage('Failed to update message');
-    } finally {
-      setSaving(false);
+      toast.error('Failed to update delay');
     }
   };
 
   const handleUpdateGlobalMessage = async () => {
     try {
-      setSaving(true);
-      const updated = await updateSettings({
-        globalMessage: globalMessage,
-      });
+      const updated = await updateSettings({ globalMessage });
       setSettings(updated);
-      setMessage('Global message updated successfully');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success('Global message updated');
     } catch (error) {
-      setMessage('Failed to update global message');
-    } finally {
-      setSaving(false);
+      toast.error('Failed to update global message');
     }
   };
 
-  const handleUpdateBasePrintingPrice = async () => {
-    const price = parseFloat(basePrintingPrice);
-    if (!basePrintingPrice || isNaN(price) || price < 0) {
-      setMessage('❌ Please enter a valid price');
-      setTimeout(() => setMessage(''), 3000);
+  const handleUpdateServiceMessage = async () => {
+    try {
+      const updated = await updateSettings({ serviceUnavailableMessage });
+      setSettings(updated);
+      toast.success('Service availability message updated');
+    } catch (error) {
+      toast.error('Failed to update message');
+    }
+  };
+
+  const handleAddService = async () => {
+    if (!newService.name.trim() || !newService.price) {
+      toast.error('Please provide name and price');
+      return;
+    }
+    const price = parseFloat(newService.price);
+    if (isNaN(price) || price < 0) {
+      toast.error('Invalid price');
       return;
     }
 
     try {
-      setSaving(true);
-      setMessage(''); // Clear any previous messages
-      
-      // Find the Black & White Printing service item index
-      const bwIndex = settings?.serviceItems.findIndex(item => item.name.includes('Black & White'));
-      
-      if (bwIndex !== undefined && bwIndex >= 0) {
-        const updated = await updateServiceItem(bwIndex, { price });
-        
-        setSettings(updated);
-        
-        // Also update the base printing price state to reflect the change
-        const updatedBwPrice = updated.serviceItems.find((item: any) => item.name.includes('Black & White'))?.price;
-        if (updatedBwPrice !== undefined) {
-          setBasePrintingPrice(updatedBwPrice.toString());
-        }
-        
-        setMessage('✅ Base printing price updated successfully! Changes will reflect on homepage and user dashboard.');
-        setTimeout(() => setMessage(''), 5000);
-      } else {
-        console.error('Black & White service not found in items:', settings?.serviceItems);
-        setMessage('❌ Black & White Printing service not found. Please add it in Service Items section below.');
-        setTimeout(() => setMessage(''), 5000);
-      }
+      const updated = await addService(newService.name, price);
+      setSettings(updated);
+      setLocalServices(updated.serviceItems || []);
+      setNewService({ name: '', price: '' });
+      toast.success('Service added successfully');
     } catch (error) {
-      console.error('Update base price error:', error);
-      setMessage('❌ Failed to update base printing price. Error: ' + (error as Error).message);
-      setTimeout(() => setMessage(''), 5000);
-    } finally {
-      setSaving(false);
+      toast.error('Failed to add service');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleLocalPriceChange = (index: number, val: string) => {
+    const arr = [...localServices];
+    arr[index].price = parseFloat(val) || 0;
+    setLocalServices(arr);
+  };
 
-  if (!settings) {
+  const handleSaveService = async (index: number) => {
+    try {
+      const s = localServices[index];
+      const updated = await updateServiceItem(index, { price: s.price, isActive: s.isActive });
+      setSettings(updated);
+      toast.success('Price saved successfully');
+    } catch(err) {
+      toast.error('Failed to save service');
+    }
+  };
+
+  const handleToggleService = async (index: number) => {
+    try {
+      const s = localServices[index];
+      const newState = !s.isActive;
+      // Update locally immediately for UX, then sync
+      const arr = [...localServices];
+      arr[index].isActive = newState;
+      setLocalServices(arr);
+      
+      const updated = await updateServiceItem(index, { isActive: newState });
+      setSettings(updated);
+      toast.success(newState ? 'Service activated' : 'Service deactivated');
+    } catch(err) {
+      toast.error('Failed to toggle service');
+      loadSettings(); // revert
+    }
+  };
+
+  const handleDeleteService = async (index: number) => {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+    try {
+      const updated = await deleteService(index);
+      setSettings(updated);
+      setLocalServices(updated.serviceItems || []);
+      toast.success('Service deleted');
+    } catch(err) {
+      toast.error('Failed to delete service');
+    }
+  };
+
+  if (loading || !settings) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-red-600">Failed to load settings</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <SettingsIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">Manage services, pricing, and availability</p>
-        </div>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Platform Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage business rules, pricing, and system configurations</p>
+      </div>
 
-        {/* Message */}
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg border-2 font-medium ${
-            message.includes('✅') || message.includes('success') 
-              ? 'bg-green-50 border-green-300 text-green-800' 
-              : message.includes('❌') || message.includes('Failed') || message.includes('not found')
-              ? 'bg-red-50 border-red-300 text-red-800'
-              : 'bg-blue-50 border-blue-300 text-blue-800'
-          }`}>
-            {message}
-          </div>
-        )}
-
-        {/* Service Availability Toggle */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Power className="h-5 w-5" />
-                Service Availability
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Control whether customers can place new orders
-              </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Main Toggles */}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Store className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Store Status</h2>
             </div>
-            <button
-              onClick={handleToggleServiceAvailability}
-              disabled={saving}
-              className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors ${
-                settings.isServiceAvailable ? 'bg-green-500' : 'bg-gray-300'
-              } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <span
-                className={`inline-block h-10 w-10 transform rounded-full bg-white transition-transform ${
-                  settings.isServiceAvailable ? 'translate-x-12' : 'translate-x-1'
+            
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Accepting Orders</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Turn off to temporarily stop new orders</p>
+              </div>
+              <button
+                onClick={() => handleToggle('isServiceAvailable', !settings.isServiceAvailable)}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                  settings.isServiceAvailable ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
                 }`}
-              />
-            </button>
-          </div>
-          <div className="mt-4">
-            <span
-              className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                settings.isServiceAvailable
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-              }`}
-            >
-              {settings.isServiceAvailable ? '✓ Service Available' : '✗ Service Unavailable'}
-            </span>
-          </div>
+              >
+                <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                  settings.isServiceAvailable ? 'translate-x-7' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
 
-          {/* Service Unavailable Message */}
-          {!settings.isServiceAvailable && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {/* Service Unavailable Message */}
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                 Service Unavailable Message
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                 This message will be displayed to users when service is unavailable
               </p>
               <textarea
                 value={serviceUnavailableMessage}
                 onChange={(e) => setServiceUnavailableMessage(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="e.g., Our printing service is temporarily unavailable. Please check back later."
+                rows={2}
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none mb-3"
               />
               <button
-                onClick={handleUpdateServiceUnavailableMessage}
-                disabled={saving}
-                className="mt-3 bg-indigo-600 dark:bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+                onClick={handleUpdateServiceMessage}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/60 rounded-lg font-medium transition-colors"
               >
                 <Save className="h-4 w-4" />
                 Save Message
               </button>
             </div>
-          )}
-        </div>
-
-        {/* COD Toggle */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Cash on Delivery (COD)
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Allow customers to pay on delivery
-              </p>
-            </div>
-            <button
-              onClick={handleToggleCod}
-              disabled={saving}
-              className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors ${
-                settings.isCodEnabled ? 'bg-green-500' : 'bg-gray-300'
-              } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <span
-                className={`inline-block h-10 w-10 transform rounded-full bg-white transition-transform ${
-                  settings.isCodEnabled ? 'translate-x-12' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-          <div className="mt-4">
-            <span
-              className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                settings.isCodEnabled
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {settings.isCodEnabled ? '✓ COD Enabled' : '✗ COD Disabled'}
-            </span>
-          </div>
-        </div>
-
-        {/* Base Printing Price - Quick Access */}
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 rounded-lg shadow-sm p-6 mb-6 border-2 border-indigo-200 dark:border-indigo-800">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              Base Printing Price (Per Page)
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Set the price per page for Black & White printing - shown in order calculations
-            </p>
           </div>
 
-          <div className="flex items-end gap-4">
-            <div className="flex-1 max-w-xs">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Price per Page (₹)
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <span className="text-gray-500 dark:text-gray-400 font-bold text-2xl">₹</span>
-                </div>
-                <input
-                  type="number"
-                  value={basePrintingPrice}
-                  onChange={(e) => setBasePrintingPrice(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 text-2xl font-bold border-2 border-indigo-300 dark:border-indigo-700 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="2"
-                  min="0"
-                  step="0.5"
-                />
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">This price is used in "pages × copies × ₹X/page" calculations</p>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <MessageSquare className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Global Message for Users</h2>
             </div>
             
-            <button
-              type="button"
-              onClick={handleUpdateBasePrintingPrice}
-              disabled={saving}
-              className="bg-indigo-600 dark:bg-indigo-500 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-semibold"
-            >
-              <Save className="h-5 w-5" />
-              {saving ? 'Updating...' : 'Update Price'}
-            </button>
-          </div>
-        </div>
-
-        {/* Admin Contact Info */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Admin Contact Information</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            This information will be displayed to customers on the homepage
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                value={adminContact.name}
-                onChange={(e) => setAdminContact({ ...adminContact, name: e.target.value })}
-                placeholder="e.g., Raman Prints"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Phone Number
-              </label>
-              <input
-                type="text"
-                value={adminContact.phone}
-                onChange={(e) => setAdminContact({ ...adminContact, phone: e.target.value })}
-                placeholder="e.g., +91 98765 43210"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This message will be displayed to all users on their dashboard homepage. Leave empty to hide.
+              </p>
+              
+              <div className="space-y-3">
+                <textarea
+                  value={globalMessage}
+                  onChange={(e) => setGlobalMessage(e.target.value)}
+                  placeholder="e.g., Due to high demand, orders may take 24-48 hours. Thank you for your patience!"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+                <button
+                  onClick={handleUpdateGlobalMessage}
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 font-medium transition-colors cursor-pointer"
+                >
+                  <Save className="h-4 w-4" />
+                  Save Global Message
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Address
-            </label>
-            <textarea
-              value={adminContact.address}
-              onChange={(e) => setAdminContact({ ...adminContact, address: e.target.value })}
-              placeholder="e.g., Shop No. 5, College Road, City - 123456"
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-
-          <button
-            onClick={handleUpdateAdminContact}
-            disabled={saving}
-            className="bg-indigo-600 dark:bg-indigo-500 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 transition-colors flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            Save Contact Info
-          </button>
-        </div>
-
-        {/* Global Message for Users */}
-        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg shadow-sm p-6 mb-6 border-2 border-blue-200 dark:border-blue-800">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              Global Message for Users
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              This message will be displayed to all users on their dashboard homepage
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Message (leave empty to hide)
-            </label>
-            <textarea
-              value={globalMessage}
-              onChange={(e) => setGlobalMessage(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 border-2 border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-              placeholder="e.g., Due to high demand, orders may take 24-48 hours. Thank you for your patience!"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Leave blank to hide the message from users. Updates apply immediately after saving.
-            </p>
-          </div>
-
-          <button
-            onClick={handleUpdateGlobalMessage}
-            disabled={saving}
-            className="mt-4 bg-blue-600 dark:bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? 'Saving...' : 'Save Global Message'}
-          </button>
-        </div>
-
-        {/* Service Items */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Service Items & Pricing</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Edit service names and prices (₹ per page or per item)</p>
-          </div>
-
-          {/* Service List */}
-          <div className="space-y-4 mb-6">
-            {settings.serviceItems.map((item, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors">
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Service Name</label>
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => handleUpdateService(index, { name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent text-lg"
-                    placeholder="e.g., Black & White Printing"
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <MonitorCheck className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Auto-Printing Engine</h2>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl mb-6">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Enable Auto-Print</h3>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                  Automatically send orders to local printer after 
+                  <input 
+                    type="number"
+                    min={0}
+                    value={autoPrintDelaySeconds}
+                    onChange={(e) => setAutoPrintDelaySeconds(parseInt(e.target.value) || 0)}
+                    className="w-16 px-1 py-0.5 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
                   />
-                </div>
-                <div className="w-44">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Price per Page/Item</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 dark:text-gray-400 font-semibold text-lg">₹</span>
-                    </div>
-                    <input
-                      type="number"
-                      value={item.price}
-                      onChange={(e) => {
-                        const newItems = [...settings.serviceItems];
-                        newItems[index] = { ...newItems[index], price: parseFloat(e.target.value) || 0 };
-                        setSettings({ ...settings, serviceItems: newItems });
-                      }}
-                      onBlur={(e) => handleUpdateService(index, { price: parseFloat(e.target.value) || 0 })}
-                      className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent text-lg font-semibold"
-                      placeholder="0"
-                      min="0"
-                      step="1"
-                    />
-                  </div>
-                </div>
-                <div className="w-28">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Status</label>
-                  <button
-                    onClick={() => handleUpdateService(index, { isActive: !item.isActive })}
-                    className={`w-full px-4 py-2 rounded-lg font-medium ${
-                      item.isActive
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    } transition-colors`}
+                  seconds
+                  <button 
+                    onClick={handleUpdateDelay}
+                    className="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800 ml-1 font-medium transition-colors cursor-pointer"
                   >
-                    {item.isActive ? 'Active' : 'Inactive'}
-                  </button>
-                </div>
-                <div>
-                  <label className="block text-xs text-transparent mb-1">Delete</label>
-                  <button
-                    onClick={() => handleDeleteService(index)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                    disabled={saving}
-                    title="Delete service"
-                  >
-                    <Trash2 className="h-6 w-6" />
+                    Set
                   </button>
                 </div>
               </div>
-            ))}
+              <button
+                onClick={() => handleToggle('isAutoPrintEnabled', !settings.isAutoPrintEnabled)}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                  settings.isAutoPrintEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+              >
+                <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                  settings.isAutoPrintEnabled ? 'translate-x-7' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Connected Printer Name
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Must exactly match the system printer name (e.g. "HP Ink Tank 310 series")</p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input
+                  type="text"
+                  value={autoPrinterName}
+                  onChange={(e) => setAutoPrinterName(e.target.value)}
+                  placeholder="HP Ink Tank 310 series"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={handleUpdatePrinterName}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 font-medium whitespace-nowrap"
+                >
+                  <Save className="h-4 w-4" />
+                  Save Name
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Add New Service */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Service</h3>
-            <div className="flex gap-4">
-              <div className="flex-1">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Printer className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pricing & Services</h2>
+            </div>
+
+            <div className="space-y-4">
+              {localServices.map((service, index) => (
+                <div key={index} className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex-1 min-w-[120px]">
+                    <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{service.name}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">₹</span>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={service.price}
+                      onChange={(e) => handleLocalPriceChange(index, e.target.value)}
+                      className="w-20 px-2 py-1 text-sm bg-white dark:bg-gray-800 border-gray-300 border dark:border-gray-600 rounded"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      onClick={() => handleSaveService(index)}
+                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-1"
+                      title="Save Price"
+                    >
+                      <Save className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleService(index)}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold ${
+                        service.isActive 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      }`}
+                    >
+                      {service.isActive ? 'Active' : 'Inactive'}
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDeleteService(index)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50"
+                      disabled={service.name.includes('B/W Printing') || service.name.includes('Black & White')}
+                      title={service.name.includes('Black') ? "Cannot delete core service" : "Delete"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add new service */}
+              <div className="mt-6 flex flex-col sm:flex-row gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
                 <input
                   type="text"
                   value={newService.name}
                   onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                  placeholder="Service name (e.g., Color Printing)"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent text-lg"
+                  placeholder="New service name (e.g. Laminating)"
+                  className="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-              <div className="w-44 relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 dark:text-gray-400 font-semibold text-lg">₹</span>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <input
+                    type="number"
+                    value={newService.price}
+                    onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                    placeholder="Price"
+                    className="w-24 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={handleAddService}
+                    className="flex items-center gap-1 px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                  >
+                    <Plus className="h-4 w-4" /> Add
+                  </button>
                 </div>
-                <input
-                  type="number"
-                  value={newService.price}
-                  onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                  placeholder="Price per page"
-                  min="0"
-                  step="1"
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent text-lg font-semibold"
-                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <CreditCard className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Payment Options</h2>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Cash on Delivery (COD)</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Allow students to pay upon picking up prints</p>
               </div>
               <button
-                onClick={handleAddService}
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleToggle('isCodEnabled', !settings.isCodEnabled)}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                  settings.isCodEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
               >
-                <Plus className="h-5 w-5" />
-                Add Service
+                <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                  settings.isCodEnabled ? 'translate-x-7' : 'translate-x-1'
+                }`} />
               </button>
+            </div>
+            
+            <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+              <h3 className="font-semibold text-indigo-900 dark:text-indigo-300">Online Payments</h3>
+              <p className="text-sm text-indigo-700 dark:text-indigo-400 mt-1">Online payments via Razorpay are actively integrated and handled automatically at checkout.</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Smartphone className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Customer Support</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                This number is used for WhatsApp integration. Customers can contact support from the checkout and layout pages. Include country code (e.g., +91).
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input
+                  type="text"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="+91 9876543210"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={handleUpdateContact}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 font-medium whitespace-nowrap"
+                >
+                  <Save className="h-4 w-4" />
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>

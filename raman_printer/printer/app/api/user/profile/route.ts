@@ -3,6 +3,8 @@ import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await auth();

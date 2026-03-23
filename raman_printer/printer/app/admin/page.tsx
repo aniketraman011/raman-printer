@@ -300,22 +300,22 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pending Verifications */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 hover:shadow-lg transition-all duration-300">
+        <Link href="/admin/users?status=pending" className="block bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-indigo-600 dark:hover:border-indigo-400 group">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pending Verifications</p>
-              <p className="text-4xl font-bold text-gray-900 dark:text-white">{stats?.pendingVerifications || 0}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Pending Verifications</p>
+              <p className="text-4xl font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{stats?.pendingVerifications || 0}</p>
             </div>
-            <div className="h-14 w-14 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+            <div className="h-14 w-14 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
               <AlertCircle className="h-7 w-7 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
           {(stats?.pendingVerifications || 0) > 0 && (
-            <span className="inline-block px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 text-xs font-semibold rounded-full">
+            <span className="inline-block px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 text-xs font-semibold rounded-full group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
               Action Required
             </span>
           )}
-        </div>
+        </Link>
 
         {/* Recent Orders (24h) */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 hover:shadow-lg transition-all duration-300">

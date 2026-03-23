@@ -80,6 +80,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
     if (status === 'CANCELLED') {
       updateData.cancelApprovedByAdmin = true;
     }
+    
+    // Log the print time if moving past PENDING and it hasn't been set
+    if ((status === 'PRINTING' || status === 'READY' || status === 'COMPLETED') && !order.printedAt) {
+        updateData.printedAt = new Date();
+    }
+    
     await Order.findByIdAndUpdate(orderId, updateData);
 
     const Settings = (await import('@/models/Settings')).default;

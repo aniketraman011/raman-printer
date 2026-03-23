@@ -20,7 +20,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-900 transition-colors duration-200">
       <AdminNav user={session.user} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8 animate-fade-in">
         {children}
       </main>
     </div>

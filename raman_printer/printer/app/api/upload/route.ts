@@ -4,6 +4,7 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import crypto from 'crypto';
+import { env } from '@/lib/env';
 
 // Configure route for large file uploads
 export const runtime = 'nodejs';
@@ -77,8 +78,8 @@ export async function POST(request: NextRequest) {
     const uploadedFiles = [];
     
     // Check environment
-    const isVercelDeployment = process.env.VERCEL === '1';
-    const hasVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+    const isVercelDeployment = env.NODE_ENV === 'production' && process.env.VERCEL === '1';
+    const hasVercelBlob = !!env.BLOB_READ_WRITE_TOKEN;
     
     // On Vercel, Blob storage is required
     if (isVercelDeployment && !hasVercelBlob) {

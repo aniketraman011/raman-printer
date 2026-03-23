@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Star, Send, MessageSquare, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function AdminFeedbackPage() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
@@ -9,7 +10,6 @@ export default function AdminFeedbackPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchFeedbacks();
@@ -41,18 +41,15 @@ export default function AdminFeedbackPage() {
 
       const data = await res.json();
       if (data.success) {
-        setMessage('Reply submitted successfully');
+        toast.success('Reply submitted successfully');
         setReplyText('');
         setReplyingTo(null);
         fetchFeedbacks();
-        setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage(data.error || 'Failed to submit reply');
-        setTimeout(() => setMessage(''), 3000);
+        toast.error(data.error || 'Failed to submit reply');
       }
     } catch (error) {
-      setMessage('Failed to submit reply');
-      setTimeout(() => setMessage(''), 3000);
+      toast.error('Failed to submit reply');
     }
   };
 
@@ -67,16 +64,13 @@ export default function AdminFeedbackPage() {
 
       const data = await res.json();
       if (data.success) {
-        setMessage('Feedback deleted successfully');
+        toast.success('Feedback deleted successfully');
         fetchFeedbacks();
-        setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage(data.error || 'Failed to delete feedback');
-        setTimeout(() => setMessage(''), 3000);
+        toast.error(data.error || 'Failed to delete feedback');
       }
     } catch (error) {
-      setMessage('Failed to delete feedback');
-      setTimeout(() => setMessage(''), 3000);
+      toast.error('Failed to delete feedback');
     } finally {
       setDeleting(null);
     }
@@ -91,21 +85,11 @@ export default function AdminFeedbackPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">User Feedbacks</h1>
         <p className="text-gray-600 dark:text-gray-400">Review and respond to user feedback</p>
       </div>
-
-      {message && (
-        <div className={`mb-4 p-4 rounded-lg ${
-          message.includes('success')
-            ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-400'
-        }`}>
-          {message}
-        </div>
-      )}
 
       {feedbacks.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-12 text-center">
@@ -165,10 +149,10 @@ export default function AdminFeedbackPage() {
 
               {/* Admin Reply */}
               {feedback.adminReply ? (
-                <div className="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-600 dark:border-indigo-400 pl-4 py-3">
+                <div className="bg-indigo-50 dark:bg-indigo-900/60 border-l-4 border-indigo-600 dark:border-indigo-400 pl-4 py-3">
                   <p className="text-sm font-medium text-indigo-900 dark:text-indigo-300 mb-1">Your Reply:</p>
-                  <p className="text-sm text-indigo-800 dark:text-indigo-400">{feedback.adminReply}</p>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-500 mt-1">
+                  <p className="text-sm text-indigo-800 dark:text-indigo-200">{feedback.adminReply}</p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
                     {new Date(feedback.adminRepliedAt).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'short',

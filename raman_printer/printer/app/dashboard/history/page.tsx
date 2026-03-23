@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Package, CheckCircle, CreditCard, Loader2 } from 'lucide-react';
+import { Package, CheckCircle, CreditCard, Loader2, Printer } from 'lucide-react';
 import { getUserOrders } from '@/app/actions/order';
 import OrderCard from '@/components/OrderCard';
 
@@ -29,11 +29,19 @@ export default function OrderHistoryPage() {
       setTimeout(() => setSuccess(''), 5000);
     }
     fetchOrders();
+    
+    // 15-second Auto Refresh
+    const intervalId = setInterval(() => {
+      fetchOrders();
+    }, 15000);
+    
     // Prefetch user phone number for Razorpay prefill
     fetch('/api/user/profile')
       .then(res => res.json())
       .then(data => { if (data.user) setUserPhone(data.user.whatsappNumber || ''); })
       .catch(() => {});
+      
+    return () => clearInterval(intervalId);
   }, [searchParams, fetchOrders]);
 
   // Calculate total remaining balance across all unpaid non-cancelled orders
@@ -179,16 +187,25 @@ export default function OrderHistoryPage() {
       )}
 
       {orders.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-12 text-center">
-          <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Orders Yet</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            You haven't placed any orders yet. Start by creating a new print order.
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-900/10 dark:to-transparent pointer-events-none"></div>
+          
+          <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-full bg-indigo-50 dark:bg-indigo-900/30 mb-6 group">
+            <Package className="h-10 w-10 text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300" />
+            <div className="absolute -top-1 -right-1 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm">
+              <Printer className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+            </div>
+          </div>
+          
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Orders Yet</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-sm mx-auto">
+            You haven't placed any orders yet. Upload a document and experience our fast printing service!
           </p>
           <a
             href="/dashboard/new"
-            className="inline-block px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all hover:shadow-md hover:-translate-y-0.5"
           >
+            <Printer className="w-5 h-5" />
             Place New Order
           </a>
         </div>

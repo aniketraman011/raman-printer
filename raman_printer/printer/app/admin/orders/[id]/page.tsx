@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Download, ArrowLeft, FileText, Eye, Edit3, Save, X, Plus, Trash2 } from 'lucide-react';
+import { Download, ArrowLeft, FileText, Eye, Edit3, Save, X, Plus, Trash2, Printer, Clock, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/constants';
+import { getSettings } from '@/app/actions/settings';
 
 export default function AdminOrderDetailPage() {
   const params = useParams();
@@ -12,17 +14,23 @@ export default function AdminOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
 
   // Edit state
   const [editPages, setEditPages] = useState(0);
   const [editCopies, setEditCopies] = useState(0);
   const [editServiceItems, setEditServiceItems] = useState<any[]>([]);
   const [availableServices, setAvailableServices] = useState<any[]>([]);
+  const [isAutoPrintEnabled, setIsAutoPrintEnabled] = useState(false);
+  const [autoPrintDelayMinutes, setAutoPrintDelayMinutes] = useState(2);
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
   useEffect(() => {
     fetchOrder();
     fetchSettings();
+    
+    // Live tick for the exact print time schedule
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, [params.id]);
 
   async function fetchOrder() {
@@ -44,9 +52,20 @@ export default function AdminOrderDetailPage() {
 
   async function fetchSettings() {
     try {
-      const res = await fetch('/api/settings', { cache: 'no-store' });
+      const [res, settingsData] = await Promise.all([
+        fetch('/api/settings', { cache: 'no-store' }),
+        getSettings()
+      ]);
       const data = await res.json();
       setAvailableServices(data.serviceItems?.filter((s: any) => s.isActive) || []);
+      if (settingsData) {
+        setIsAutoPrintEnabled(settingsData.isAutoPrintEnabled);
+        setAutoPrintDelayMinutes(
+          settingsData.autoPrintDelaySeconds !== undefined 
+            ? Math.floor(settingsData.autoPrintDelaySeconds / 60) 
+            : 2
+        );
+      }
     } catch (err) {
       console.error('Failed to load settings');
     }
@@ -57,12 +76,10 @@ export default function AdminOrderDetailPage() {
     setEditCopies(order.copies || 1);
     setEditServiceItems(JSON.parse(JSON.stringify(order.serviceItems || [])));
     setEditing(true);
-    setMessage('');
   }
 
   function cancelEditing() {
     setEditing(false);
-    setMessage('');
   }
 
   function updateServiceQuantity(index: number, quantity: number) {
@@ -108,7 +125,6 @@ export default function AdminOrderDetailPage() {
 
   async function saveChanges() {
     setSaving(true);
-    setMessage('');
     try {
       const updatedItems = getUpdatedServiceItems();
       const newTotal = updatedItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
@@ -131,23 +147,42 @@ export default function AdminOrderDetailPage() {
         const pStatus = data.order?.paymentStatus || '';
         let msg = 'Order updated successfully!';
         if (pStatus === 'PENDING' && paid > 0 && total > paid) {
-          msg += ` Remaining balance: ₹${total - paid} (Payment status: PENDING)`;
-        } else if (pStatus === 'PAID') {
-          msg += ' Payment status: PAID.';
-        } else if (pStatus === 'PENDING') {
-          msg += ' Payment status set to PENDING.';
+          msg = `Order updated! Remaining balance to collect: ₹${total - paid}`;
         }
-        setMessage(msg);
+        toast.success(msg);
         setEditing(false);
         fetchOrder();
       } else {
-        setMessage('Failed to update: ' + (data.error || 'Unknown error'));
+        toast.error('Failed to update: ' + (data.error || 'Unknown error'));
       }
     } catch (err) {
-      setMessage('Failed to save changes');
+      toast.error('Failed to save changes');
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handlePrintNow() {
+    if (!order) return;
+    setSaving(true);
+    const toastId = toast.loading('Waking up printer...');
+    try {
+      const res = await fetch('/api/admin/print-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order._id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'Successfully sent to printer!', { id: toastId });
+        fetchOrder(); // Reload to show READY status
+      } else {
+        toast.error(data.error || 'Failed to print', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('Network error. Is printer connected?', { id: toastId });
+    }
+    setSaving(false);
   }
 
   if (loading) {
@@ -179,48 +214,39 @@ export default function AdminOrderDetailPage() {
       {/* Back Button */}
       <button
         onClick={() => router.push('/admin/orders')}
-        className="mb-6 flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+        className="mb-6 flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 w-max"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Orders
       </button>
 
-      {message && (
-        <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${
-          message.includes('success')
-            ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-800'
-        }`}>
-          {message}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Order Information */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Order Information</h2>
             {!editing ? (
               <button
                 onClick={startEditing}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors font-medium"
+                disabled={saving}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors font-medium disabled:opacity-50"
               >
                 <Edit3 className="h-4 w-4" />
                 Edit Order
               </button>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   onClick={saveChanges}
                   disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" />
                   {saving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={cancelEditing}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
                 >
                   <X className="h-4 w-4" />
                   Cancel
@@ -244,6 +270,88 @@ export default function AdminOrderDetailPage() {
               </p>
             </div>
 
+            {/* Print Status UI Block */}
+            {(() => {
+              const st = order.status;
+              const scheduleDate = new Date(new Date(order.createdAt).getTime() + autoPrintDelayMinutes * 60 * 1000);
+              const scheduleStr = scheduleDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
+              const isReady = st === 'READY' || st === 'COMPLETED';
+              const isPrinting = st === 'PRINTING';
+              const isPendingAuto = st === 'PENDING' && isAutoPrintEnabled;
+              const isPendingManual = st === 'PENDING' && !isAutoPrintEnabled;
+
+              const secondsLeft = Math.max(0, autoPrintDelayMinutes * 60 - Math.floor((currentTime - new Date(order.createdAt).getTime()) / 1000));
+
+              let boxClasses = "p-4 rounded-xl border mt-2 ";
+              if (isReady) boxClasses += "border-green-500 dark:border-green-500";
+              else if (isPrinting) boxClasses += "border-blue-400 ring-2 ring-blue-300 animate-pulse dark:border-blue-500";
+              else if (isPendingAuto) boxClasses += "border-blue-500 dark:border-blue-600";
+              else boxClasses += "border-gray-300 dark:border-gray-600";
+
+              return (
+                <div className={boxClasses}>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Print Status</p>
+                  
+                  <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4">
+                    {/* Badge */}
+                    {isReady ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-lg text-sm font-semibold">
+                        <CheckCircle className="h-4 w-4" />
+                        Printed
+                      </div>
+                    ) : isPrinting ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-sm font-semibold">
+                        <Printer className="h-4 w-4 animate-bounce" />
+                        Printing in Progress
+                      </div>
+                    ) : isPendingAuto ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-semibold">
+                        <Clock className="h-4 w-4" />
+                        Scheduled (Auto)
+                      </div>
+                    ) : (
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-200">
+                        Manual Print
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    {isReady ? (
+                      <button
+                        onClick={handlePrintNow}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-colors disabled:opacity-50"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Re-Print
+                      </button>
+                    ) : isPrinting ? null : (
+                      <button
+                        onClick={handlePrintNow}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Now
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Subtext */}
+                  {isReady ? (
+                    <p className="text-xs text-green-600 dark:text-green-500 mt-4 font-medium flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      Printed at: {order.printedAt ? new Date(order.printedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase() : 'Unknown'}
+                    </p>
+                  ) : isPendingAuto ? (
+                    <p className="text-xs text-blue-600 dark:text-blue-500 mt-4 font-medium">
+                      Auto-print scheduled at: {scheduleStr} ({autoPrintDelayMinutes} min after order)
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })()}
+
             {/* 3 & 4. Pages & Copies - Editable */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -254,7 +362,7 @@ export default function AdminOrderDetailPage() {
                     min="1"
                     value={editPages}
                     onChange={(e) => setEditPages(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 text-xl font-bold"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 text-lg font-semibold"
                   />
                 ) : (
                   <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{order.pages ?? 'N/A'}</p>
@@ -268,7 +376,7 @@ export default function AdminOrderDetailPage() {
                     min="1"
                     value={editCopies}
                     onChange={(e) => setEditCopies(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 text-xl font-bold"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 text-lg font-semibold"
                   />
                 ) : (
                   <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{order.copies ?? 'N/A'}</p>
@@ -292,38 +400,42 @@ export default function AdminOrderDetailPage() {
               {editing ? (
                 <div className="space-y-2">
                   {editServiceItems.map((item: any, index: number) => (
-                    <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">{item.name}</span>
-                      <div className="flex items-center gap-1">
-                        <label className="text-xs text-gray-500">Qty:</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => updateServiceQuantity(index, parseInt(e.target.value) || 1)}
-                          className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded"
-                        />
+                    <div key={index} className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 w-full sm:w-auto flex-1 min-w-0 truncate mb-2 sm:mb-0">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <label className="text-xs text-gray-500">Qty:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateServiceQuantity(index, parseInt(e.target.value) || 1)}
+                            className="w-16 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <label className="text-xs text-gray-500">₹:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={item.price}
+                            onChange={(e) => updateServicePrice(index, parseFloat(e.target.value) || 0)}
+                            className="w-16 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded"
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-xs text-gray-500">₹:</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={item.price}
-                          onChange={(e) => updateServicePrice(index, parseFloat(e.target.value) || 0)}
-                          className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded"
-                        />
+                      <div className="flex items-center justify-between w-full sm:w-auto mt-2 sm:mt-0 ml-auto">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white sm:min-w-[60px] text-right">
+                          = ₹{item.quantity * item.price}
+                        </span>
+                        <button
+                          onClick={() => removeServiceItem(index)}
+                          className="p-2 ml-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white min-w-[60px] text-right">
-                        = ₹{item.quantity * item.price}
-                      </span>
-                      <button
-                        onClick={() => removeServiceItem(index)}
-                        className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
                   ))}
 
@@ -345,7 +457,7 @@ export default function AdminOrderDetailPage() {
                     </div>
                   )}
 
-                  <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+                  <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">New Total:</span>
                       <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">₹{editTotal}</span>
@@ -359,7 +471,6 @@ export default function AdminOrderDetailPage() {
 
                   {/* Remaining balance preview when editing */}
                   {(() => {
-                    // If order was PAID but paidAmount=0 (legacy/COD), treat original total as paid
                     const paid = (order.paidAmount || 0) > 0 ? order.paidAmount : (order.paymentStatus === 'PAID' ? order.totalAmount : 0);
                     if (paid > 0 && editTotal > paid) {
                       const remaining = editTotal - paid;
@@ -420,7 +531,6 @@ export default function AdminOrderDetailPage() {
 
                 {/* Remaining Balance Info */}
                 {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (() => {
-                  // If paidAmount=0 but was PAID (legacy/COD), treat original total as paid
                   const paid = (order.paidAmount || 0) > 0 ? order.paidAmount : 0;
                   const remaining = order.totalAmount - paid;
                   return remaining > 0 ? (
@@ -453,18 +563,21 @@ export default function AdminOrderDetailPage() {
                   </span>
                 </div>
 
-                {/* 9. Order Status (admin can change) */}
+                {/* 9. Order Status */}
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Order Status</p>
-                  <span className={`inline-block px-3 py-1.5 rounded-lg text-sm font-semibold ${
-                    order.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                    order.status === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                    order.status === 'READY' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                    order.status === 'PRINTING' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                  }`}>
-                    {order.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border ${
+                      order.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' :
+                      order.status === 'CANCELLED' ? 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' :
+                      order.status === 'READY' ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 shadow-sm' :
+                      order.status === 'PRINTING' ? 'bg-blue-100 text-blue-800 border-blue-400 ring-2 ring-blue-300 animate-pulse shadow-sm dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700' :
+                      'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
+                    }`}>
+                      {order.status}
+                      {order.status === 'PRINTING' && <Printer className="h-4 w-4 animate-bounce" />}
+                    </span>
+                  </div>
                 </div>
 
                 {/* 10. Phone Number */}

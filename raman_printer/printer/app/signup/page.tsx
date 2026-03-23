@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Printer, User, Phone, GraduationCap, Lock, Eye, EyeOff } from 'lucide-react';
+import { Printer, User, Phone, GraduationCap, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { registerUser } from '@/app/actions/user';
 import { USER_YEARS } from '@/lib/constants';
 
@@ -167,8 +167,9 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
           </form>

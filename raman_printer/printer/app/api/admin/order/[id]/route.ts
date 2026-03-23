@@ -44,6 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         message: order.message,
         cancelRequested: order.cancelRequested,
         createdAt: order.createdAt,
+        printedAt: order.printedAt,
         user: userId ? {
           fullName: userId.fullName,
           whatsappNumber: userId.whatsappNumber,

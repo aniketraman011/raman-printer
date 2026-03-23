@@ -3,6 +3,7 @@
 import { auth } from '@/auth';
 import connectDB from '@/lib/db';
 import Settings from '@/models/Settings';
+import { revalidatePath } from 'next/cache';
 
 // Helper function to check if user is admin
 async function requireAdmin() {
@@ -32,6 +33,8 @@ export async function getSettings() {
           { name: 'Lamination (per page)', price: 10, isActive: true },
         ],
         isServiceAvailable: true,
+        isAutoPrintEnabled: false,
+        autoPrinterName: 'HP Ink Tank 310 series',
         isCodEnabled: true,
         totalRevenue: 0,
         totalOrders: 0,
@@ -52,6 +55,8 @@ export async function getSettings() {
         { name: 'Lamination (per page)', price: 10, isActive: true },
       ],
       isServiceAvailable: true,
+      isAutoPrintEnabled: false,
+      autoPrinterName: 'HP Ink Tank 310 series',
       isCodEnabled: true,
       adminContactName: 'Raman Prints',
       adminContactPhone: '+91 00000 00000',
@@ -72,6 +77,9 @@ export async function updateSettings(data: {
   adminContactAddress?: string;
   serviceUnavailableMessage?: string;
   globalMessage?: string;
+  isAutoPrintEnabled?: boolean;
+  autoPrinterName?: string;
+  autoPrintDelaySeconds?: number;
 }) {
   try {
     // Require admin authentication
@@ -87,6 +95,9 @@ export async function updateSettings(data: {
       Object.assign(settings, data);
       await settings.save();
     }
+    
+    // Aggressively flush Next.js server cache to sync the Auto-Print banner state instantly
+    revalidatePath('/admin', 'layout');
     
     return JSON.parse(JSON.stringify(settings));
   } catch (error: any) {
