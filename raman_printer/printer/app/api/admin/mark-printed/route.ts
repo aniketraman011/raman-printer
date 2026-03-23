@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Order from '@/models/Order';
-import Settings from '@/models/Settings';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { print } from 'pdf-to-printer';
-import { ensurePdf } from '@/lib/fileConverter';
 
 export async function POST(req: Request) {
   try {
@@ -21,16 +15,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
-    const settings = await Settings.findOne();
-    const printerName = settings?.autoPrinterName || 'HP Ink Tank 310 series';
-
-    order.status = 'PRINTING';
-    order.printedAt = undefined; // local worker checks for null/undefined
+    order.status = 'READY';
+    order.printedAt = new Date();
     await order.save();
 
-    return NextResponse.json({ success: true, message: 'Print job queued for local print worker' });
+    return NextResponse.json({ success: true, message: 'Order marked as printed' });
   } catch (error) {
-    console.error('Print Now Error:', error);
+    console.error('Mark Printed Error:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
