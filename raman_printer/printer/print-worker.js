@@ -2,7 +2,6 @@ const { print } = require('pdf-to-printer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const fetch = require('node-fetch'); // Make sure you use Node 18+ or install node-fetch
 
 // REPLACE this URL with your actual Vercel project URL once deployed
 const VERCEL_APP_URL = 'https://raman-printer.vercel.app'; 
