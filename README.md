@@ -30,39 +30,39 @@ On the other side, admins get a dashboard to manage orders, verify users, config
 
 | Landing Page | Login |
 |---|---|
-| ![Landing Page](./screenshots/landing-page.png) | ![Login Page](./screenshots/login-page.png) |
+| ![Landing Page](./raman_printer/printer/screenshot/landing-page.png) | ![Login Page](./raman_printer/printer/screenshot/login-page.png) |
 
 ### Student Experience
 
 | Dashboard | New Print — Upload |
 |---|---|
-| ![Student Dashboard](./screenshots/student-dashboard.png) | ![New Print Upload](./screenshots/new-print-upload.png) |
+| ![Student Dashboard](./raman_printer/printer/screenshot/student-dashboard.png) | ![New Print Upload](./raman_printer/printer/screenshot/new-print-upload.png) |
 
 | New Print — Checkout | My Orders |
 |---|---|
-| ![New Print Checkout](./screenshots/new-print-checkout.png) | ![My Orders](./screenshots/my-orders.png) |
+| ![New Print Checkout](./raman_printer/printer/screenshot/new-print-checkout.png) | ![My Orders](./raman_printer/printer/screenshot/my-orders.png) |
 
 | Feedback |
 |---|
-| ![Feedback Page](./screenshots/feedback-page.png) |
+| ![Feedback Page](./raman_printer/printer/screenshot/feedback-page.png) |
 
 ### Admin Panel
 
 | Dashboard | Order Management |
 |---|---|
-| ![Admin Dashboard](./screenshots/admin-dashboard.png) | ![Admin Orders](./screenshots/admin-orders.png) |
+| ![Admin Dashboard](./raman_printer/printer/screenshot/admin-dashboard.png) | ![Admin Orders](./raman_printer/printer/screenshot/admin-orders.png) |
 
 | Order Detail | User Management |
 |---|---|
-| ![Admin Order Detail](./screenshots/admin-order-detail.png) | ![Admin Users](./screenshots/admin-users.png) |
+| ![Admin Order Detail](./raman_printer/printer/screenshot/admin-order-detail.png) | ![Admin Users](./raman_printer/printer/screenshot/admin-users.png) |
 
-| Feedback Management | Store & Payment Settings |
+| Store & Payment Settings | Auto-Print & Pricing Settings |
 |---|---|
-| ![Admin Feedback](./screenshots/admin-feedback.png) | ![Admin Settings Store](./screenshots/admin-settings-store.png) |
+| ![Admin Settings Store](./raman_printer/printer/screenshot/admin-settings-store.png) | ![Admin Settings Pricing](./raman_printer/printer/screenshot/admin-settings-pricing.png) |
 
-| Auto-Print & Pricing Settings |
+|  Feedback Management |
 |---|
-| ![Admin Settings Pricing](./screenshots/admin-settings-pricing.png) |
+| ![Admin Feedback](./raman_printer/printer/screenshot/admin-feedback.png) |
 
 ---
 
