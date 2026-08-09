@@ -10,7 +10,10 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   
   const [newService, setNewService] = useState({ name: '', price: '' });
+  const [ownerName, setOwnerName] = useState('ANIKET RAMAN');
+  const [managedByName, setManagedByName] = useState('AYUSH SHARMA');
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [adminContactAddress, setAdminContactAddress] = useState('');
   const [autoPrinterName, setAutoPrinterName] = useState('HP Ink Tank 310 series');
   const [autoPrintDelaySeconds, setAutoPrintDelaySeconds] = useState(10);
   const [globalMessage, setGlobalMessage] = useState('');
@@ -28,7 +31,10 @@ export default function AdminSettingsPage() {
       const data = await getSettings();
       setSettings(data);
       setLocalServices(data.serviceItems || []);
+      setOwnerName(data.adminContactName || 'ANIKET RAMAN');
+      setManagedByName(data.managedByName || 'AYUSH SHARMA');
       setWhatsappNumber(data.adminContactPhone || '');
+      setAdminContactAddress(data.adminContactAddress || '');
       setAutoPrinterName(data.autoPrinterName || 'HP Ink Tank 310 series');
       setAutoPrintDelaySeconds(data.autoPrintDelaySeconds || 10);
       setGlobalMessage(data.globalMessage || '');
@@ -53,14 +59,19 @@ export default function AdminSettingsPage() {
   const handleUpdateContact = async () => {
     try {
       if (!whatsappNumber.trim()) {
-        toast.error('Number cannot be empty');
+        toast.error('WhatsApp number cannot be empty');
         return;
       }
-      const updated = await updateSettings({ adminContactPhone: whatsappNumber });
+      const updated = await updateSettings({
+        adminContactName: ownerName.trim() || 'ANIKET RAMAN',
+        managedByName: managedByName.trim() || 'AYUSH SHARMA',
+        adminContactPhone: whatsappNumber.trim(),
+        adminContactAddress: adminContactAddress.trim(),
+      });
       setSettings(updated);
-      toast.success('Support contact updated');
+      toast.success('Contact information updated successfully');
     } catch (error) {
-      toast.error('Failed to update contact');
+      toast.error('Failed to update contact information');
     }
   };
 
@@ -456,28 +467,73 @@ export default function AdminSettingsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 sm:p-8">
             <div className="flex items-center gap-3 mb-6">
               <Smartphone className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Customer Support</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contact & Management Information</h2>
             </div>
             
             <div className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                This number is used for WhatsApp integration. Customers can contact support from the checkout and layout pages. Include country code (e.g., +91).
+                These details are displayed in the Contact Information section on the homepage and customer dashboard.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Owner Name
+                </label>
+                <input
+                  type="text"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  placeholder="ANIKET RAMAN"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Managed By
+                </label>
+                <input
+                  type="text"
+                  value={managedByName}
+                  onChange={(e) => setManagedByName(e.target.value)}
+                  placeholder="AYUSH SHARMA"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">
+                  WhatsApp Support Phone Number
+                </label>
                 <input
                   type="text"
                   value={whatsappNumber}
                   onChange={(e) => setWhatsappNumber(e.target.value)}
-                  placeholder="+91 9876543210"
+                  placeholder="+91 83065 07991"
                   className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Pickup / Physical Address
+                </label>
+                <input
+                  type="text"
+                  value={adminContactAddress}
+                  onChange={(e) => setAdminContactAddress(e.target.value)}
+                  placeholder="CECT HOSTEL FF 20"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="pt-2">
                 <button
                   onClick={handleUpdateContact}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 font-medium whitespace-nowrap"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 font-medium cursor-pointer transition-colors shadow-sm"
                 >
                   <Save className="h-4 w-4" />
-                  Save
+                  Save Contact Information
                 </button>
               </div>
             </div>

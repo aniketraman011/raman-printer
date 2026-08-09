@@ -58,8 +58,9 @@ export async function getSettings() {
       isAutoPrintEnabled: false,
       autoPrinterName: 'HP Ink Tank 310 series',
       isCodEnabled: true,
-      adminContactName: 'Raman Prints',
-      adminContactPhone: '+91 00000 00000',
+      adminContactName: 'ANIKET RAMAN',
+      managedByName: 'AYUSH SHARMA',
+      adminContactPhone: '+91 83065 07991',
       totalRevenue: 0,
       totalOrders: 0,
       completedOrders: 0,
@@ -73,6 +74,7 @@ export async function updateSettings(data: {
   isServiceAvailable?: boolean;
   isCodEnabled?: boolean;
   adminContactName?: string;
+  managedByName?: string;
   adminContactPhone?: string;
   adminContactAddress?: string;
   serviceUnavailableMessage?: string;

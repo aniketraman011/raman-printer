@@ -81,20 +81,51 @@ export default function AdminUserTable({ users, onUpdate }: AdminUserTableProps)
     onUpdate();
   }
 
+  async function handleBulkDelete() {
+    if (!confirm(`Are you sure you want to permanently delete ${selectedUsers.size} selected user(s)? This action cannot be undone.`)) return;
+
+    setBulkUpdating(true);
+    const toastId = toast.loading(`Deleting ${selectedUsers.size} users...`);
+    let successCount = 0;
+
+    for (const userId of selectedUsers) {
+      const result = await softDeleteUser(userId);
+      if (result.success) successCount++;
+    }
+
+    setBulkUpdating(false);
+    setSelectedUsers(new Set());
+
+    if (successCount === selectedUsers.size) {
+      toast.success(`Successfully deleted ${successCount} users`, { id: toastId });
+    } else {
+      toast.error(`Partial success: Deleted ${successCount} out of ${selectedUsers.size} users`, { id: toastId });
+    }
+    onUpdate();
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden transition-all duration-300">
       {selectedUsers.size > 0 && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/40 border-b border-indigo-100 dark:border-indigo-800/50 px-6 py-3 flex items-center justify-between animate-fade-in">
+        <div className="bg-indigo-50 dark:bg-indigo-900/40 border-b border-indigo-100 dark:border-indigo-800/50 px-6 py-3 flex items-center justify-between animate-fade-in flex-wrap gap-4">
           <span className="text-sm font-semibold text-indigo-800 dark:text-indigo-300">
             {selectedUsers.size} user{selectedUsers.size > 1 ? 's' : ''} selected
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <button
               onClick={handleBulkVerification}
               disabled={bulkUpdating}
               className="text-xs px-3 py-1.5 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               Verify Selected
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkUpdating}
+              className="text-xs px-3 py-1.5 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete Selected
             </button>
             <button
               onClick={() => setSelectedUsers(new Set())}

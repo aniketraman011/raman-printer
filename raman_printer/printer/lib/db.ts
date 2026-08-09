@@ -1,5 +1,13 @@
+import dns from 'dns';
 import mongoose from 'mongoose';
 import { env } from '@/lib/env';
+
+// Fix for querySrv ECONNREFUSED on networks/ISPs with faulty SRV DNS resolution
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+} catch {
+  // Ignore in environments where setting servers is restricted
+}
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -18,6 +26,10 @@ async function connectDB() {
   }
 
   const MONGODB_URI = env.MONGODB_URI;
+
+  try {
+    dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+  } catch {}
 
   if (!cached.promise) {
     const opts = {

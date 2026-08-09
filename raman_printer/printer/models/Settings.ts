@@ -15,6 +15,7 @@ export interface ISettings extends Document {
   autoPrintDelaySeconds: number;
   isCodEnabled: boolean;
   adminContactName: string;
+  managedByName: string;
   adminContactPhone: string;
   adminContactAddress: string;
   globalMessage: string;
@@ -82,7 +83,12 @@ const SettingsSchema = new Schema<ISettings>(
     },
     adminContactName: {
       type: String,
-      default: 'Admin',
+      default: 'ANIKET RAMAN',
+      trim: true,
+    },
+    managedByName: {
+      type: String,
+      default: 'AYUSH SHARMA',
       trim: true,
     },
     adminContactPhone: {

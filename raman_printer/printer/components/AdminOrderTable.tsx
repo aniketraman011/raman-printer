@@ -168,6 +168,31 @@ export default function AdminOrderTable({ orders, isAutoPrintEnabled = false, au
     onUpdate();
   }
 
+  async function handleBulkDelete() {
+    if (!confirm(`Are you sure you want to permanently delete ${selectedOrders.size} selected order(s)? This will delete their uploaded files and cannot be undone.`)) {
+      return;
+    }
+    
+    setBulkUpdating(true);
+    const toastId = toast.loading(`Deleting ${selectedOrders.size} orders...`);
+    let successCount = 0;
+    
+    for (const orderId of selectedOrders) {
+      const result = await deleteOrder(orderId);
+      if (result.success) successCount++;
+    }
+    
+    setBulkUpdating(false);
+    setSelectedOrders(new Set());
+    
+    if (successCount === selectedOrders.size) {
+      toast.success(`Successfully deleted ${successCount} orders`, { id: toastId });
+    } else {
+      toast.error(`Partial success: Deleted ${successCount} out of ${selectedOrders.size} orders`, { id: toastId });
+    }
+    onUpdate();
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden">
       {selectedOrders.size > 0 && (
@@ -197,6 +222,14 @@ export default function AdminOrderTable({ orders, isAutoPrintEnabled = false, au
               className="text-xs px-3 py-1.5 bg-[#22c55e] text-white font-medium rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 ml-2"
             >
               Verify Selected
+            </button>
+            <button
+              onClick={() => handleBulkDelete()}
+              disabled={bulkUpdating}
+              className="text-xs px-3 py-1.5 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1 ml-2"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete Selected
             </button>
             <button
               onClick={() => setSelectedOrders(new Set())}

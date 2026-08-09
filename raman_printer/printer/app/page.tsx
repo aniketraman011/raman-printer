@@ -99,7 +99,7 @@ export default async function HomePage() {
           <div className="mt-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Contact Information</h2>
             
-            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-full">
                   <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,7 +108,19 @@ export default async function HomePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase">Owner Name</p>
-                  <p className="text-lg text-gray-900 dark:text-white font-semibold">{settings.adminContactName || 'Raman Prints'}</p>
+                  <p className="text-lg text-gray-900 dark:text-white font-semibold">{settings.adminContactName || 'ANIKET RAMAN'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-full">
+                  <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase">Managed By</p>
+                  <p className="text-lg text-gray-900 dark:text-white font-semibold">{settings.managedByName || 'AYUSH SHARMA'}</p>
                 </div>
               </div>
 
@@ -121,16 +133,31 @@ export default async function HomePage() {
                 <div>
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase">Phone Number</p>
                   <a
-                    href={`https://wa.me/${(settings.adminContactPhone || '+91 98765 43210').replace(/[^0-9]/g, '')}`}
+                    href={`https://wa.me/${(settings.adminContactPhone || '+91 83065 07991').replace(/[^0-9]/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-lg text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline"
                   >
-                    {settings.adminContactPhone || '+91 98765 43210'}
+                    {settings.adminContactPhone || '+91 83065 07991'}
                   </a>
                 </div>
               </div>
             </div>
+
+            {settings.adminContactAddress && (
+              <div className="mt-6 max-w-4xl mx-auto flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-full">
+                  <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase">Address</p>
+                  <p className="text-base text-gray-900 dark:text-white font-medium">{settings.adminContactAddress}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

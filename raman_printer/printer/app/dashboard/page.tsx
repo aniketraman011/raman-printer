@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PlusCircle, History, AlertCircle, User, Phone, MapPin, MessageSquare } from 'lucide-react';
+import { PlusCircle, History, AlertCircle, User, UserCheck, Phone, MapPin, MessageSquare } from 'lucide-react';
 import { auth } from '@/auth';
 import { getSettings } from '@/app/actions/settings';
 
@@ -144,7 +144,7 @@ export default async function DashboardPage() {
       {/* Contact Information */}
       <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all duration-300">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Contact Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Owner Name */}
           <div className="flex items-center gap-4 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
             <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -152,7 +152,18 @@ export default async function DashboardPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Owner Name</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{settings.adminContactName}</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{settings.adminContactName || 'ANIKET RAMAN'}</p>
+            </div>
+          </div>
+
+          {/* Managed By */}
+          <div className="flex items-center gap-4 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+            <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+              <UserCheck className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Managed By</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{settings.managedByName || 'AYUSH SHARMA'}</p>
             </div>
           </div>
           
@@ -164,12 +175,12 @@ export default async function DashboardPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Phone Number</p>
               <a
-                href={`https://wa.me/${settings.adminContactPhone.replace(/[^0-9]/g, '')}`}
+                href={`https://wa.me/${(settings.adminContactPhone || '+91 83065 07991').replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors duration-200"
               >
-                {settings.adminContactPhone}
+                {settings.adminContactPhone || '+91 83065 07991'}
               </a>
             </div>
           </div>
